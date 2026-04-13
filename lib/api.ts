@@ -45,9 +45,10 @@ const API_BASE =
 
 export async function getLatestScan(): Promise<LatestScanResponse | null> {
   try {
-    const res = await fetch(`${API_BASE}/api/scan/latest`, {
-      cache: "no-store",
-    });
+   const res = await fetch(`${API_BASE}/api/scan/latest`, {
+  cache: 'no-store',
+  next: { revalidate: 0 },
+})
 
     if (!res.ok) return null;
 
