@@ -19,25 +19,25 @@ export function StockTable({ rows }: { rows: StockRow[] }) {
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50 text-left">
           <tr>
-            <th className="px-4 py-3">股號</th>
-            <th className="px-4 py-3">名稱</th>
-            <th className="px-4 py-3">現價</th>
-            <th className="px-4 py-3">量比</th>
-            <th className="px-4 py-3">成交值(億)</th>
-            <th className="px-4 py-3">總分</th>
-            <th className="px-4 py-3">標籤</th>
+            <th className="whitespace-nowrap px-4 py-3">股號</th>
+            <th className="whitespace-nowrap px-4 py-3">名稱</th>
+            <th className="whitespace-nowrap px-4 py-3">現價</th>
+            <th className="whitespace-nowrap px-4 py-3">量比</th>
+            <th className="whitespace-nowrap px-4 py-3">成交值(億)</th>
+            <th className="whitespace-nowrap px-4 py-3">總分</th>
+            <th className="whitespace-nowrap px-4 py-3">標籤</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((stock) => (
             <tr key={stock.stock_id} className="border-t">
-              <td className="px-4 py-3">{stock.stock_id}</td>
-              <td className="px-4 py-3">{stock.name}</td>
-              <td className="px-4 py-3">{stock.close}</td>
-              <td className="px-4 py-3">{fmt1(stock.volume_ratio)}</td>
-              <td className="px-4 py-3">{fmt1(stock.turnover_100m)}</td>
-              <td className="px-4 py-3">{stock.score ?? '-'}</td>
-              <td className="px-4 py-3">{stock.tag ?? '-'}</td>
+              <td className="whitespace-nowrap px-4 py-3">{stock.stock_id}</td>
+              <td className="whitespace-nowrap px-4 py-3">{stock.name}</td>
+              <td className="whitespace-nowrap px-4 py-3">{stock.close}</td>
+              <td className="whitespace-nowrap px-4 py-3">{fmt1(stock.volume_ratio)}</td>
+              <td className="whitespace-nowrap px-4 py-3">{fmt1(stock.turnover_100m)}</td>
+              <td className="whitespace-nowrap px-4 py-3">{stock.score ?? '-'}</td>
+              <td className="whitespace-nowrap px-4 py-3">{stock.tag ?? '-'}</td>
             </tr>
           ))}
         </tbody>
