@@ -15,10 +15,9 @@ export type StockRow = {
   revenue_mom?: number;
   pct_5d?: number;
   pct_20d?: number;
-}
+};
 
 export type ScanPayload = {
-  generated_at?: string;
   summary: {
     market_scanned: number;
     selected: number;
@@ -34,22 +33,36 @@ export type ScanPayload = {
   overheated: StockRow[];
   high_turnover: StockRow[];
   all_selected: StockRow[];
-}
+};
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+export type LatestScanResponse = {
+  updated_at?: string;
+  data: ScanPayload;
+};
 
-export async function getLatestScan(): Promise<ScanPayload | null> {
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+
+export async function getLatestScan(): Promise<LatestScanResponse | null> {
   try {
-    const res = await fetch(`${API_BASE}/api/scan/latest`, { cache: 'no-store' });
+    const res = await fetch(`${API_BASE}/api/scan/latest`, {
+      cache: "no-store",
+    });
+
     if (!res.ok) return null;
-    return res.json();
+
+    return await res.json();
   } catch {
     return null;
   }
 }
 
 export async function runScan() {
-  const res = await fetch(`${API_BASE}/api/scan/run`, { method: 'POST' });
-  if (!res.ok) throw new Error('Run scan failed');
+  const res = await fetch(`${API_BASE}/api/scan/run`, {
+    method: "POST",
+  });
+
+  if (!res.ok) throw new Error("Run scan failed");
+
   return res.json();
 }
