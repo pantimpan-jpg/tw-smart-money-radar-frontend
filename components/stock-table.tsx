@@ -1,15 +1,26 @@
-import Link from 'next/link'
-import { StockRow } from '@/lib/api'
+type StockRow = {
+  stock_id: string
+  name: string
+  close: number
+  volume_ratio: number
+  turnover_100m: number
+  score?: number
+  tag?: string
+}
+
+function fmt1(value: number | null | undefined) {
+  if (value === null || value === undefined || Number.isNaN(value)) return '-'
+  return Number(value).toFixed(1)
+}
 
 export function StockTable({ rows }: { rows: StockRow[] }) {
   return (
-    <div className="overflow-x-auto rounded-3xl bg-white shadow-sm">
-      <table className="min-w-full border-collapse">
-        <thead>
-          <tr className="border-b bg-slate-50 text-left text-sm text-slate-500">
+    <div className="overflow-x-auto rounded-2xl bg-white shadow-sm">
+      <table className="min-w-full text-sm">
+        <thead className="bg-gray-50 text-left">
+          <tr>
             <th className="px-4 py-3">股號</th>
             <th className="px-4 py-3">名稱</th>
-            <th className="px-4 py-3">題材</th>
             <th className="px-4 py-3">現價</th>
             <th className="px-4 py-3">量比</th>
             <th className="px-4 py-3">成交值(億)</th>
@@ -18,20 +29,15 @@ export function StockTable({ rows }: { rows: StockRow[] }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.stock_id} className="border-b text-sm hover:bg-slate-50">
-              <td className="px-4 py-3 font-semibold">{row.stock_id}</td>
-              <td className="px-4 py-3">
-                <Link href={`/stocks/${row.stock_id}`} className="text-sky-700 hover:underline">
-                  {row.name}
-                </Link>
-              </td>
-              <td className="px-4 py-3">{row.theme || row.group || '-'}</td>
-              <td className="px-4 py-3">{row.close}</td>
-              <td className="px-4 py-3">{row.volume_ratio}</td>
-              <td className="px-4 py-3">{row.turnover_100m}</td>
-              <td className="px-4 py-3 font-semibold">{row.score_total}</td>
-              <td className="px-4 py-3">{row.radar_tag}</td>
+          {rows.map((stock) => (
+            <tr key={stock.stock_id} className="border-t">
+              <td className="px-4 py-3">{stock.stock_id}</td>
+              <td className="px-4 py-3">{stock.name}</td>
+              <td className="px-4 py-3">{stock.close}</td>
+              <td className="px-4 py-3">{fmt1(stock.volume_ratio)}</td>
+              <td className="px-4 py-3">{fmt1(stock.turnover_100m)}</td>
+              <td className="px-4 py-3">{stock.score ?? '-'}</td>
+              <td className="px-4 py-3">{stock.tag ?? '-'}</td>
             </tr>
           ))}
         </tbody>
