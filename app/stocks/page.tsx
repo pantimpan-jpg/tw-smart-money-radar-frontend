@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getLatestScan, type ScanPayload } from '@/lib/api'
 import { StockTable } from '@/components/stock-table'
 
