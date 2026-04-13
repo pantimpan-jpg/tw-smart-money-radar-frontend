@@ -1,3 +1,5 @@
+<div className="text-red-500 font-bold">TEST 2026-04-12-1041</div>
+
 export const dynamic = 'force-dynamic'
 
 import { getLatestScan, type ScanPayload, type StockRow } from '@/lib/api'
