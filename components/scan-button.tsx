@@ -11,6 +11,12 @@ export function ScanButton() {
 
   const handleScan = async () => {
     if (loading) return
+
+    if (!API_BASE) {
+      alert('找不到 API_BASE，請檢查 NEXT_PUBLIC_API_BASE_URL')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -19,13 +25,14 @@ export function ScanButton() {
       })
 
       if (!res.ok) {
-        throw new Error('掃描啟動失敗')
+        throw new Error(`掃描啟動失敗: ${res.status}`)
       }
 
-      alert('已開始掃描，幾分鐘後再重新整理查看結果。')
+      alert('已開始掃描。全市場掃描需要一些時間，請稍後再重新整理查看結果。')
+
       setTimeout(() => {
         router.refresh()
-      }, 2000)
+      }, 5000)
     } catch (err) {
       console.error(err)
       alert('掃描啟動失敗')
@@ -38,7 +45,7 @@ export function ScanButton() {
     <button
       onClick={handleScan}
       disabled={loading}
-      className="rounded-full border border-white/20 bg-white px-6 py-3 text-base font-medium text-slate-900 hover:bg-gray-100 disabled:opacity-60"
+      className="rounded-2xl border border-white/20 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {loading ? '掃描中...' : '立即掃描'}
     </button>
