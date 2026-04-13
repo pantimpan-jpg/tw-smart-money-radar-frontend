@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { getLatestScan, type LatestScanResponse, type ScanPayload } from '@/lib/api'
 import { StockTable } from '@/components/stock-table'
 import { ScanButton } from '@/components/scan-button'
+import { ScanProgress } from '@/components/scan-progress'
 
 function Card({ title, value, hint }: { title: string; value: string | number; hint: string }) {
   return (
@@ -70,6 +71,8 @@ export default function HomePage() {
           <ScanButton />
         </div>
       </section>
+
+      <ScanProgress />
 
       {loading ? (
         <div className="rounded-3xl bg-white p-8 shadow-sm">
