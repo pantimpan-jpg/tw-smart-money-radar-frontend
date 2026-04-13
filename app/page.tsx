@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { getLatestScan, type LatestScanResponse, type ScanPayload } from '@/lib/api'
 import { StockTable } from '@/components/stock-table'
+import { ScanButton } from '@/components/scan-button'
 
 function Card({ title, value, hint }: { title: string; value: string | number; hint: string }) {
   return (
@@ -58,13 +59,15 @@ export default function HomePage() {
         <p className="mt-2 max-w-3xl text-slate-300">
           公開版台股主力掃描器。顯示 Top30、剛啟動、可能第二波、主力追蹤與過熱風險。
         </p>
-        <div className="mt-4 flex gap-3">
-          <Link href="/stocks" className="rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-900">
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Link
+            href="/stocks"
+            className="rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-900"
+          >
             查看全清單
           </Link>
-          <Link href="/themes" className="rounded-2xl border border-white/30 px-4 py-2 text-sm font-medium text-white">
-            看題材分組
-          </Link>
+          <ScanButton />
         </div>
       </section>
 
@@ -83,9 +86,12 @@ export default function HomePage() {
           </section>
 
           <section className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-xl font-bold">Top 30</h2>
-              <div className="text-sm text-slate-500">更新時間：{formatTaipeiTime(updatedAt)}</div>
+              <div className="flex items-center gap-3">
+                <div className="text-sm text-slate-500">更新時間：{formatTaipeiTime(updatedAt)}</div>
+                <ScanButton />
+              </div>
             </div>
             <StockTable rows={data.top30 ?? []} />
           </section>
@@ -105,6 +111,9 @@ export default function HomePage() {
         <div className="rounded-3xl bg-white p-8 shadow-sm">
           <div className="text-lg font-semibold">目前還沒有掃描結果</div>
           <p className="mt-2 text-slate-600">請先執行掃描，再回來查看結果。</p>
+          <div className="mt-4">
+            <ScanButton />
+          </div>
         </div>
       )}
     </main>
