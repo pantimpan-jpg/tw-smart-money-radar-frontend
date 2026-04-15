@@ -15,6 +15,28 @@ type PageProps = {
   }
 }
 
+type WindowSummary = {
+  d1?: number | null
+  d5?: number | null
+  d10?: number | null
+  d20?: number | null
+}
+
+type InstitutionalSummary = {
+  latest_date?: string | null
+  foreign?: WindowSummary
+  trust?: WindowSummary
+  dealer?: WindowSummary
+}
+
+type MarginSummary = {
+  latest_date?: string | null
+  margin_balance?: number | null
+  short_balance?: number | null
+  margin?: WindowSummary
+  short?: WindowSummary
+}
+
 function fmtNumber(value?: number | null, digits = 2) {
   if (value === null || value === undefined || Number.isNaN(value)) return '待補'
   return Number(value).toFixed(digits)
@@ -25,7 +47,7 @@ function fmtPercent(value?: number | null, digits = 1) {
   return `${Number(value).toFixed(digits)}%`
 }
 
-function fmtSigned(value?: number | null, digits = 2) {
+function fmtSigned(value?: number | null, digits = 0) {
   if (value === null || value === undefined || Number.isNaN(value)) return '待補'
   const num = Number(value)
   return `${num > 0 ? '+' : ''}${num.toFixed(digits)}`
@@ -46,19 +68,19 @@ function fmtCount(value?: number | null) {
   return Number(value).toLocaleString('zh-TW')
 }
 
-function toYi(value?: number | null, digits = 1) {
+function toYi(value?: number | null) {
   if (value === null || value === undefined || Number.isNaN(value)) return null
   return Number(value) / 100000000
 }
 
 function fmtYi(value?: number | null, digits = 1) {
-  const yi = toYi(value, digits)
+  const yi = toYi(value)
   if (yi === null) return '待補'
   return yi.toFixed(digits)
 }
 
 function fmtYiWithUnit(value?: number | null, digits = 1) {
-  const yi = toYi(value, digits)
+  const yi = toYi(value)
   if (yi === null) return '待補'
   return `${yi.toFixed(digits)} 億`
 }
@@ -68,7 +90,7 @@ function getQuarterShortLabel(quarter: string) {
 }
 
 function getMonthShortLabel(month: string) {
-  return month.replace('/', '/')
+  return month
 }
 
 function StatCard({
@@ -293,6 +315,25 @@ function buildEpsChartData(epsList: EpsItem[]) {
     }))
 }
 
+function buildInstitutionalRows(summary?: InstitutionalSummary | null) {
+  if (!summary) return []
+
+  return [
+    ['外資', fmtSigned(summary.foreign?.d1), fmtSigned(summary.foreign?.d5), fmtSigned(summary.foreign?.d10), fmtSigned(summary.foreign?.d20)],
+    ['投信', fmtSigned(summary.trust?.d1), fmtSigned(summary.trust?.d5), fmtSigned(summary.trust?.d10), fmtSigned(summary.trust?.d20)],
+    ['自營商', fmtSigned(summary.dealer?.d1), fmtSigned(summary.dealer?.d5), fmtSigned(summary.dealer?.d10), fmtSigned(summary.dealer?.d20)],
+  ]
+}
+
+function buildMarginRows(summary?: MarginSummary | null) {
+  if (!summary) return []
+
+  return [
+    ['融資', fmtSigned(summary.margin?.d1), fmtSigned(summary.margin?.d5), fmtSigned(summary.margin?.d10), fmtSigned(summary.margin?.d20), summary.margin_balance ?? '待補'],
+    ['融券', fmtSigned(summary.short?.d1), fmtSigned(summary.short?.d5), fmtSigned(summary.short?.d10), fmtSigned(summary.short?.d20), summary.short_balance ?? '待補'],
+  ]
+}
+
 export default async function StockDetailPage({ params }: PageProps) {
   const stockId = params.stock_id
   const detail: StockDetailResponse | null = await getStockDetail(stockId)
@@ -306,6 +347,14 @@ export default async function StockDetailPage({ params }: PageProps) {
   const financials = detail?.financials ?? []
   const news = detail?.news ?? []
   const brokerBranches = detail?.broker_branches ?? []
+
+  const institutionalSummary = (detail as StockDetailResponse & {
+    institutional_summary?: InstitutionalSummary
+  } | null)?.institutional_summary
+
+  const marginSummary = (detail as StockDetailResponse & {
+    margin_summary?: MarginSummary
+  } | null)?.margin_summary
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
@@ -357,23 +406,19 @@ export default async function StockDetailPage({ params }: PageProps) {
           hint={overview?.change_pct !== undefined ? `漲跌幅 ${fmtPercent(overview.change_pct, 2)}` : 'TaiwanStockPrice'}
         />
         <StatCard
-          title="外資買賣超"
-          value={overview?.foreign_buy_sell !== undefined ? fmtSigned(overview.foreign_buy_sell, 0) : '待補'}
-          hint={overview?.industry || 'Institutional / Shareholding'}
+          title="外資當日買賣超"
+          value={fmtSigned(institutionalSummary?.foreign?.d1)}
+          hint={institutionalSummary?.latest_date ? `${institutionalSummary.latest_date} / 單位：張` : overview?.industry || '單位：張'}
         />
         <StatCard
-          title="投信買賣超"
-          value={
-            overview?.investment_trust_buy_sell !== undefined
-              ? fmtSigned(overview.investment_trust_buy_sell, 0)
-              : '待補'
-          }
-          hint={overview?.theme || 'Institutional'}
+          title="投信當日買賣超"
+          value={fmtSigned(institutionalSummary?.trust?.d1)}
+          hint={institutionalSummary?.latest_date ? `${institutionalSummary.latest_date} / 單位：張` : overview?.theme || '單位：張'}
         />
         <StatCard
-          title="融資變化"
-          value={overview?.margin_change !== undefined ? fmtSigned(overview.margin_change, 0) : '待補'}
-          hint={overview?.margin_balance !== undefined ? `融資餘額 ${fmtCount(overview.margin_balance)}` : 'MarginPurchaseShortSale'}
+          title="融資 / 融券當日變化"
+          value={`${fmtSigned(marginSummary?.margin?.d1)} / ${fmtSigned(marginSummary?.short?.d1)}`}
+          hint={marginSummary?.latest_date ? `${marginSummary.latest_date} / 單位：張` : '單位：張'}
         />
       </section>
 
@@ -491,9 +536,42 @@ export default async function StockDetailPage({ params }: PageProps) {
               ['券商分數', overview?.broker_score !== undefined ? fmtNumber(overview.broker_score, 1) : '待補'],
               ['主力分數', overview?.main_force_score !== undefined ? fmtNumber(overview.main_force_score, 1) : '待補'],
               ['最終分數', overview?.final_score !== undefined ? fmtNumber(overview.final_score, 1) : '待補'],
-              ['外資持股變化', overview?.foreign_buy_sell !== undefined ? fmtSigned(overview.foreign_buy_sell, 0) : '待補'],
-              ['融券餘額', overview?.short_balance !== undefined ? fmtCount(overview.short_balance) : '待補'],
+              ['外資當日', fmtSigned(institutionalSummary?.foreign?.d1)],
+              ['投信當日', fmtSigned(institutionalSummary?.trust?.d1)],
+              ['自營商當日', fmtSigned(institutionalSummary?.dealer?.d1)],
+              ['融資當日', fmtSigned(marginSummary?.margin?.d1)],
+              ['融券當日', fmtSigned(marginSummary?.short?.d1)],
             ]}
+          />
+        </SectionCard>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-2">
+        <SectionCard
+          title="法人買賣超變化"
+          extra={
+            <div className="text-sm text-slate-500">
+              單位：張
+            </div>
+          }
+        >
+          <SimpleTable
+            headers={['法人', '當日', '5日', '10日', '20日']}
+            rows={buildInstitutionalRows(institutionalSummary)}
+          />
+        </SectionCard>
+
+        <SectionCard
+          title="融資融券變化"
+          extra={
+            <div className="text-sm text-slate-500">
+              單位：張
+            </div>
+          }
+        >
+          <SimpleTable
+            headers={['項目', '當日', '5日', '10日', '20日', '目前餘額']}
+            rows={buildMarginRows(marginSummary)}
           />
         </SectionCard>
       </section>
