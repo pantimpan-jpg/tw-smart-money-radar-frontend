@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { getLatestScan, type StockRow } from '@/lib/api'
+import { ScanButton } from '@/components/scan-button'
+import { ScanProgress } from '@/components/scan-progress'
 
 function fmtPrice(value?: number | null) {
   if (value === null || value === undefined || Number.isNaN(value)) return '待補'
@@ -134,20 +136,26 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <form action="/stocks" className="mt-6 flex flex-col gap-3 md:flex-row">
-          <input
-            type="text"
-            name="q"
-            placeholder="搜尋股號、股名、題材，例如：1303 / 南亞 / PCB"
-            className="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white/30"
-          />
-          <button
-            type="submit"
-            className="rounded-2xl bg-white px-5 py-3 text-sm font-medium text-slate-900 transition hover:bg-slate-100"
-          >
-            搜尋
-          </button>
-        </form>
+        <div className="mt-6 flex flex-col gap-3 md:flex-row">
+          <form action="/stocks" className="flex w-full gap-3">
+            <input
+              type="text"
+              name="q"
+              placeholder="搜尋股號、股名、題材，例如：1303 / 南亞 / PCB"
+              className="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white/30"
+            />
+            <button
+              type="submit"
+              className="rounded-2xl bg-white px-5 py-3 text-sm font-medium text-slate-900 transition hover:bg-slate-100"
+            >
+              搜尋
+            </button>
+          </form>
+
+          <div className="shrink-0">
+            <ScanButton />
+          </div>
+        </div>
 
         <div className="mt-4 flex flex-wrap gap-3">
           <Link
@@ -164,6 +172,8 @@ export default async function HomePage() {
           </Link>
         </div>
       </section>
+
+      <ScanProgress />
 
       {data ? (
         <>
@@ -212,7 +222,7 @@ export default async function HomePage() {
       ) : (
         <section className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-100">
           <div className="text-xl font-bold text-slate-900">目前還沒有掃描結果</div>
-          <p className="mt-2 text-slate-600">請先等排程掃描完成，或手動觸發 scan 後再查看。</p>
+          <p className="mt-2 text-slate-600">請先等排程掃描完成，或按右上方的立即掃描手動執行。</p>
         </section>
       )}
     </main>
