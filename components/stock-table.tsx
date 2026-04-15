@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 type StockRow = {
   stock_id: string
   name?: string
@@ -121,6 +123,17 @@ function Td({
   )
 }
 
+function StockNameCell({ stock }: { stock: StockRow }) {
+  return (
+    <Link
+      href={`/stocks/${stock.stock_id}`}
+      className="font-medium text-slate-900 underline-offset-4 hover:text-slate-700 hover:underline"
+    >
+      {getName(stock)}
+    </Link>
+  )
+}
+
 function StartingTable({ rows }: { rows: StockRow[] }) {
   return (
     <TableShell>
@@ -139,7 +152,9 @@ function StartingTable({ rows }: { rows: StockRow[] }) {
         {rows.map((stock) => (
           <tr key={stock.stock_id} className="border-t border-slate-100 hover:bg-slate-50/70">
             <Td strong>{stock.stock_id}</Td>
-            <Td>{getName(stock)}</Td>
+            <Td>
+              <StockNameCell stock={stock} />
+            </Td>
             <Td>{fmtPrice(stock.close)}</Td>
             <Td>{fmt1(stock.volume_ratio)}</Td>
             <Td>{fmt1(stock.turnover_100m)}</Td>
@@ -172,7 +187,9 @@ function SecondWaveTable({ rows }: { rows: StockRow[] }) {
         {rows.map((stock) => (
           <tr key={stock.stock_id} className="border-t border-slate-100 hover:bg-slate-50/70">
             <Td strong>{stock.stock_id}</Td>
-            <Td>{getName(stock)}</Td>
+            <Td>
+              <StockNameCell stock={stock} />
+            </Td>
             <Td>{fmtPrice(stock.close)}</Td>
             <Td>{fmtPercent(stock.pct_20d)}</Td>
             <Td>{fmt1(stock.volume_ratio)}</Td>
@@ -205,7 +222,9 @@ function AccelerationTable({ rows }: { rows: StockRow[] }) {
         {rows.map((stock) => (
           <tr key={stock.stock_id} className="border-t border-slate-100 hover:bg-slate-50/70">
             <Td strong>{stock.stock_id}</Td>
-            <Td>{getName(stock)}</Td>
+            <Td>
+              <StockNameCell stock={stock} />
+            </Td>
             <Td>{fmtPrice(stock.close)}</Td>
             <Td>{fmt1(stock.turnover_100m)}</Td>
             <Td>{fmt1(stock.broker_score)}</Td>
@@ -237,7 +256,9 @@ function StrategyTable({ rows }: { rows: StockRow[] }) {
         {rows.map((stock) => (
           <tr key={stock.stock_id} className="border-t border-slate-100 hover:bg-slate-50/70">
             <Td strong>{stock.stock_id}</Td>
-            <Td>{getName(stock)}</Td>
+            <Td>
+              <StockNameCell stock={stock} />
+            </Td>
             <Td>{fmtPrice(stock.close)}</Td>
             <Td>{fmt1(stock.turnover_100m)}</Td>
             <Td>{fmt1(stock.volume_ratio)}</Td>
