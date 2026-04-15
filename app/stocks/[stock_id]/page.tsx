@@ -46,6 +46,31 @@ function fmtCount(value?: number | null) {
   return Number(value).toLocaleString('zh-TW')
 }
 
+function toYi(value?: number | null, digits = 1) {
+  if (value === null || value === undefined || Number.isNaN(value)) return null
+  return Number(value) / 100000000
+}
+
+function fmtYi(value?: number | null, digits = 1) {
+  const yi = toYi(value, digits)
+  if (yi === null) return '待補'
+  return yi.toFixed(digits)
+}
+
+function fmtYiWithUnit(value?: number | null, digits = 1) {
+  const yi = toYi(value, digits)
+  if (yi === null) return '待補'
+  return `${yi.toFixed(digits)} 億`
+}
+
+function getQuarterShortLabel(quarter: string) {
+  return quarter.replace('20', '')
+}
+
+function getMonthShortLabel(month: string) {
+  return month.replace('/', '/')
+}
+
 function StatCard({
   title,
   value,
@@ -89,11 +114,15 @@ function PlaceholderChart({
   subtitle,
   data,
   footer,
+  unitLabel,
+  valueFormatter,
 }: {
   title: string
   subtitle: string
   data: Array<{ label: string; value?: number | null }>
   footer?: string
+  unitLabel?: string
+  valueFormatter?: (value?: number | null) => string
 }) {
   const validValues = data
     .map((item) => item.value)
@@ -106,38 +135,52 @@ function PlaceholderChart({
       <div className="text-base font-semibold text-slate-900">{title}</div>
       <div className="mt-2 text-sm text-slate-500">{subtitle}</div>
 
-      <div className="mt-6 grid h-64 grid-cols-6 items-end gap-3 rounded-xl bg-white p-4 ring-1 ring-slate-100">
-        {data.length ? (
-          data.map((item) => {
-            const raw = item.value
-            const hasValue =
-              raw !== null && raw !== undefined && !Number.isNaN(raw)
-            const height = hasValue
-              ? Math.max((Math.abs(raw) / maxValue) * 100, 8)
-              : 8
+      <div className="mt-6 rounded-xl bg-white p-4 ring-1 ring-slate-100">
+        <div
+          className={`grid h-64 items-end gap-3 ${
+            data.length >= 10 ? 'grid-cols-12' : data.length >= 6 ? 'grid-cols-6' : 'grid-cols-4'
+          }`}
+        >
+          {data.length ? (
+            data.map((item) => {
+              const raw = item.value
+              const hasValue =
+                raw !== null && raw !== undefined && !Number.isNaN(raw)
+              const height = hasValue
+                ? Math.max((Math.abs(raw) / maxValue) * 100, 8)
+                : 8
 
-            return (
-              <div key={item.label} className="flex h-full flex-col justify-end">
-                <div className="mb-2 text-center text-[11px] text-slate-400">
-                  {hasValue ? fmtNumber(raw, 2) : '待補'}
+              return (
+                <div key={item.label} className="flex h-full min-w-0 flex-col justify-end">
+                  <div className="mb-2 truncate text-center text-[11px] text-slate-400">
+                    {hasValue
+                      ? valueFormatter
+                        ? valueFormatter(raw)
+                        : fmtNumber(raw, 2)
+                      : '待補'}
+                  </div>
+                  <div
+                    className={`rounded-t-xl ${
+                      hasValue ? 'bg-slate-800' : 'bg-slate-200'
+                    }`}
+                    style={{ height: `${height}%` }}
+                  />
+                  <div className="mt-2 truncate text-center text-[11px] text-slate-500">
+                    {item.label}
+                  </div>
                 </div>
-                <div
-                  className={`rounded-t-xl ${
-                    hasValue ? 'bg-slate-800' : 'bg-slate-200'
-                  }`}
-                  style={{ height: `${height}%` }}
-                />
-                <div className="mt-2 text-center text-[11px] text-slate-500">
-                  {item.label}
-                </div>
-              </div>
-            )
-          })
-        ) : (
-          <div className="col-span-6 flex h-full items-center justify-center text-sm text-slate-400">
-            目前沒有資料
-          </div>
-        )}
+              )
+            })
+          ) : (
+            <div className="col-span-full flex h-full items-center justify-center text-sm text-slate-400">
+              目前沒有資料
+            </div>
+          )}
+        </div>
+
+        {unitLabel ? (
+          <div className="mt-3 text-right text-xs text-slate-400">單位：{unitLabel}</div>
+        ) : null}
       </div>
 
       {footer ? <div className="mt-4 text-sm text-slate-500">{footer}</div> : null}
@@ -194,7 +237,7 @@ function SimpleTable({
 function buildRevenueRows(revenues: RevenueItem[]) {
   return revenues.slice(0, 12).map((item) => [
     item.date,
-    item.revenue !== undefined ? fmtNumber(item.revenue, 2) : '待補',
+    item.revenue !== undefined ? fmtYi(item.revenue, 1) : '待補',
     item.revenue_mom !== undefined ? fmtPercent(item.revenue_mom, 1) : '待補',
     item.revenue_yoy !== undefined ? fmtPercent(item.revenue_yoy, 1) : '待補',
   ])
@@ -214,10 +257,10 @@ function buildDividendRows(dividends: DividendItem[]) {
 function buildFinancialRows(financials: FinancialStatementItem[]) {
   return financials.slice(0, 8).map((item) => [
     item.period,
-    item.revenue !== undefined ? fmtNumber(item.revenue, 2) : '待補',
-    item.gross_profit !== undefined ? fmtNumber(item.gross_profit, 2) : '待補',
-    item.operating_income !== undefined ? fmtNumber(item.operating_income, 2) : '待補',
-    item.net_income !== undefined ? fmtNumber(item.net_income, 2) : '待補',
+    item.revenue !== undefined ? fmtYi(item.revenue, 1) : '待補',
+    item.gross_profit !== undefined ? fmtYi(item.gross_profit, 1) : '待補',
+    item.operating_income !== undefined ? fmtYi(item.operating_income, 1) : '待補',
+    item.net_income !== undefined ? fmtYi(item.net_income, 1) : '待補',
     item.eps !== undefined ? fmtNumber(item.eps, 2) : '待補',
   ])
 }
@@ -231,17 +274,23 @@ function buildNewsRows(news: NewsItem[]) {
 }
 
 function buildRevenueChartData(revenues: RevenueItem[]) {
-  return revenues.slice(0, 6).map((item) => ({
-    label: item.date,
-    value: item.revenue,
-  }))
+  return revenues
+    .slice(0, 12)
+    .reverse()
+    .map((item) => ({
+      label: getMonthShortLabel(item.date),
+      value: toYi(item.revenue),
+    }))
 }
 
 function buildEpsChartData(epsList: EpsItem[]) {
-  return epsList.slice(0, 6).map((item) => ({
-    label: item.quarter,
-    value: item.eps,
-  }))
+  return epsList
+    .slice(0, 4)
+    .reverse()
+    .map((item) => ({
+      label: getQuarterShortLabel(item.quarter),
+      value: item.eps,
+    }))
 }
 
 export default async function StockDetailPage({ params }: PageProps) {
@@ -372,14 +421,16 @@ export default async function StockDetailPage({ params }: PageProps) {
           title="EPS"
           extra={
             <div className="text-sm text-slate-500">
-              最近 {epsList.length || 0} 筆
+              近 4 季
             </div>
           }
         >
           <PlaceholderChart
             title="EPS 趨勢圖"
-            subtitle="之後可再換成真正折線圖或柱狀圖。"
+            subtitle="顯示近一年季度 EPS。"
             data={buildEpsChartData(epsList)}
+            unitLabel="元"
+            valueFormatter={(value) => fmtNumber(value, 2)}
             footer={
               epsList[0]
                 ? `最新一期 ${epsList[0].quarter} / EPS ${fmtNumber(epsList[0].eps, 2)} / 年增 ${fmtPercent(
@@ -395,20 +446,25 @@ export default async function StockDetailPage({ params }: PageProps) {
           title="月營收"
           extra={
             <div className="text-sm text-slate-500">
-              最近 {revenues.length || 0} 筆
+              近 12 個月
             </div>
           }
         >
           <PlaceholderChart
             title="月營收趨勢圖"
-            subtitle="之後可再換成真正折線圖或柱狀圖。"
+            subtitle="顯示近一年月營收，已轉成較精簡數字。"
             data={buildRevenueChartData(revenues)}
+            unitLabel="億"
+            valueFormatter={(value) => fmtNumber(value, 1)}
             footer={
               revenues[0]
-                ? `最新一期 ${revenues[0].date} / 月增 ${fmtPercent(
-                    revenues[0].revenue_mom,
+                ? `最新一期 ${revenues[0].date} / 月營收 ${fmtYiWithUnit(
+                    revenues[0].revenue,
                     1
-                  )} / 年增 ${fmtPercent(revenues[0].revenue_yoy, 1)}`
+                  )} / 月增 ${fmtPercent(revenues[0].revenue_mom, 1)} / 年增 ${fmtPercent(
+                    revenues[0].revenue_yoy,
+                    1
+                  )}`
                 : '目前沒有月營收資料'
             }
           />
@@ -445,7 +501,7 @@ export default async function StockDetailPage({ params }: PageProps) {
       <section className="grid gap-6 xl:grid-cols-2">
         <SectionCard title="財報">
           <SimpleTable
-            headers={['期間', '營收', '毛利', '營業利益', '淨利', 'EPS']}
+            headers={['期間', '營收(億)', '毛利(億)', '營業利益(億)', '淨利(億)', 'EPS']}
             rows={buildFinancialRows(financials)}
           />
         </SectionCard>
@@ -461,7 +517,7 @@ export default async function StockDetailPage({ params }: PageProps) {
       <section className="grid gap-6 xl:grid-cols-2">
         <SectionCard title="月營收明細">
           <SimpleTable
-            headers={['日期', '營收', '月增', '年增']}
+            headers={['日期', '營收(億)', '月增', '年增']}
             rows={buildRevenueRows(revenues)}
           />
         </SectionCard>
