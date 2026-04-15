@@ -22,37 +22,37 @@ type StockRow = {
 
 type Variant = 'starting' | 'secondWave' | 'acceleration' | 'strategy' | 'default'
 
-function fmt1(value: number | null | undefined) {
-  if (value === null || value === undefined || Number.isNaN(value)) return '-'
+function fmt1(value: number | null | undefined, fallback = '待補') {
+  if (value === null || value === undefined || Number.isNaN(value)) return fallback
   return Number(value).toFixed(1)
 }
 
-function fmtPrice(value: number | null | undefined) {
-  if (value === null || value === undefined || Number.isNaN(value)) return '-'
+function fmtPrice(value: number | null | undefined, fallback = '待補') {
+  if (value === null || value === undefined || Number.isNaN(value)) return fallback
   return Number(value).toFixed(2)
 }
 
-function fmtPercent(value: number | null | undefined) {
-  if (value === null || value === undefined || Number.isNaN(value)) return '-'
+function fmtPercent(value: number | null | undefined, fallback = '待補') {
+  if (value === null || value === undefined || Number.isNaN(value)) return fallback
   return `${Number(value).toFixed(1)}%`
 }
 
 function getName(stock: StockRow) {
-  return stock.name ?? stock.stock_name ?? '-'
+  return stock.name ?? stock.stock_name ?? '待補'
 }
 
 function getScore(stock: StockRow) {
   const value = stock.score ?? stock.score_total
-  if (value === null || value === undefined || Number.isNaN(value)) return '-'
+  if (value === null || value === undefined || Number.isNaN(value)) return '待補'
   return Number(value).toFixed(1)
 }
 
 function getTag(stock: StockRow) {
-  return stock.tag ?? stock.radar_tag ?? '-'
+  return stock.tag ?? stock.radar_tag ?? '待補'
 }
 
 function getTheme(stock: StockRow) {
-  return stock.theme ?? stock.group ?? '-'
+  return stock.theme ?? stock.group ?? '待補'
 }
 
 function Badge({
@@ -72,7 +72,7 @@ function Badge({
 
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${toneClass[tone]}`}
+      className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${toneClass[tone]}`}
     >
       {text}
     </span>
@@ -87,171 +87,167 @@ function EmptyState() {
   )
 }
 
+function TableShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="overflow-x-auto rounded-2xl bg-white shadow-sm ring-1 ring-slate-100">
+      <table className="w-full min-w-[760px] text-sm">{children}</table>
+    </div>
+  )
+}
+
+function Th({ children }: { children: React.ReactNode }) {
+  return (
+    <th className="whitespace-nowrap px-5 py-3 text-left font-semibold text-slate-700">
+      {children}
+    </th>
+  )
+}
+
+function Td({
+  children,
+  strong = false,
+}: {
+  children: React.ReactNode
+  strong?: boolean
+}) {
+  return (
+    <td
+      className={`whitespace-nowrap px-5 py-3 ${
+        strong ? 'font-medium text-slate-900' : 'text-slate-800'
+      }`}
+    >
+      {children}
+    </td>
+  )
+}
+
 function StartingTable({ rows }: { rows: StockRow[] }) {
   return (
-    <table className="min-w-full text-sm">
-      <thead className="bg-slate-50 text-left text-slate-600">
+    <TableShell>
+      <thead className="bg-slate-50">
         <tr>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">股號</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">名稱</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">現價</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">量比</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">成交值(億)</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">5日漲幅</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">型態</th>
+          <Th>股號</Th>
+          <Th>名稱</Th>
+          <Th>現價</Th>
+          <Th>量比</Th>
+          <Th>成交值(億)</Th>
+          <Th>5日漲幅</Th>
+          <Th>型態</Th>
         </tr>
       </thead>
       <tbody>
         {rows.map((stock) => (
           <tr key={stock.stock_id} className="border-t border-slate-100 hover:bg-slate-50/70">
-            <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">
-              {stock.stock_id}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">{getName(stock)}</td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-              {fmtPrice(stock.close)}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-              {fmt1(stock.volume_ratio)}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-              {fmt1(stock.turnover_100m)}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-              {fmtPercent(stock.pct_5d)}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3">
+            <Td strong>{stock.stock_id}</Td>
+            <Td>{getName(stock)}</Td>
+            <Td>{fmtPrice(stock.close)}</Td>
+            <Td>{fmt1(stock.volume_ratio)}</Td>
+            <Td>{fmt1(stock.turnover_100m)}</Td>
+            <Td>{fmtPercent(stock.pct_5d)}</Td>
+            <Td>
               <Badge text={getTag(stock)} tone="green" />
-            </td>
+            </Td>
           </tr>
         ))}
       </tbody>
-    </table>
+    </TableShell>
   )
 }
 
 function SecondWaveTable({ rows }: { rows: StockRow[] }) {
   return (
-    <table className="min-w-full text-sm">
-      <thead className="bg-slate-50 text-left text-slate-600">
+    <TableShell>
+      <thead className="bg-slate-50">
         <tr>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">股號</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">名稱</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">現價</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">20日漲幅</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">量比</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">主力分數</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">型態</th>
+          <Th>股號</Th>
+          <Th>名稱</Th>
+          <Th>現價</Th>
+          <Th>20日漲幅</Th>
+          <Th>量比</Th>
+          <Th>主力分數</Th>
+          <Th>型態</Th>
         </tr>
       </thead>
       <tbody>
         {rows.map((stock) => (
           <tr key={stock.stock_id} className="border-t border-slate-100 hover:bg-slate-50/70">
-            <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">
-              {stock.stock_id}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">{getName(stock)}</td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-              {fmtPrice(stock.close)}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-              {fmtPercent(stock.pct_20d)}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-              {fmt1(stock.volume_ratio)}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-              {fmt1(stock.main_force_score)}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3">
+            <Td strong>{stock.stock_id}</Td>
+            <Td>{getName(stock)}</Td>
+            <Td>{fmtPrice(stock.close)}</Td>
+            <Td>{fmtPercent(stock.pct_20d)}</Td>
+            <Td>{fmt1(stock.volume_ratio)}</Td>
+            <Td>{fmt1(stock.main_force_score)}</Td>
+            <Td>
               <Badge text={getTag(stock)} tone="blue" />
-            </td>
+            </Td>
           </tr>
         ))}
       </tbody>
-    </table>
+    </TableShell>
   )
 }
 
 function AccelerationTable({ rows }: { rows: StockRow[] }) {
   return (
-    <table className="min-w-full text-sm">
-      <thead className="bg-slate-50 text-left text-slate-600">
+    <TableShell>
+      <thead className="bg-slate-50">
         <tr>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">股號</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">名稱</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">現價</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">成交值(億)</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">籌碼分數</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">總分</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">題材</th>
+          <Th>股號</Th>
+          <Th>名稱</Th>
+          <Th>現價</Th>
+          <Th>成交值(億)</Th>
+          <Th>籌碼分數</Th>
+          <Th>總分</Th>
+          <Th>題材</Th>
         </tr>
       </thead>
       <tbody>
         {rows.map((stock) => (
           <tr key={stock.stock_id} className="border-t border-slate-100 hover:bg-slate-50/70">
-            <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">
-              {stock.stock_id}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">{getName(stock)}</td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-              {fmtPrice(stock.close)}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-              {fmt1(stock.turnover_100m)}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-              {fmt1(stock.broker_score)}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3 font-semibold text-slate-900">
-              {getScore(stock)}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3">
+            <Td strong>{stock.stock_id}</Td>
+            <Td>{getName(stock)}</Td>
+            <Td>{fmtPrice(stock.close)}</Td>
+            <Td>{fmt1(stock.turnover_100m)}</Td>
+            <Td>{fmt1(stock.broker_score)}</Td>
+            <Td strong>{getScore(stock)}</Td>
+            <Td>
               <Badge text={getTheme(stock)} tone="orange" />
-            </td>
+            </Td>
           </tr>
         ))}
       </tbody>
-    </table>
+    </TableShell>
   )
 }
 
 function StrategyTable({ rows }: { rows: StockRow[] }) {
   return (
-    <table className="min-w-full text-sm">
-      <thead className="bg-slate-50 text-left text-slate-600">
+    <TableShell>
+      <thead className="bg-slate-50">
         <tr>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">股號</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">名稱</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">現價</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">成交值(億)</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">量比</th>
-          <th className="whitespace-nowrap px-4 py-3 font-semibold">標籤</th>
+          <Th>股號</Th>
+          <Th>名稱</Th>
+          <Th>現價</Th>
+          <Th>成交值(億)</Th>
+          <Th>量比</Th>
+          <Th>標籤</Th>
         </tr>
       </thead>
       <tbody>
         {rows.map((stock) => (
           <tr key={stock.stock_id} className="border-t border-slate-100 hover:bg-slate-50/70">
-            <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">
-              {stock.stock_id}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">{getName(stock)}</td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-              {fmtPrice(stock.close)}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-              {fmt1(stock.turnover_100m)}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-              {fmt1(stock.volume_ratio)}
-            </td>
-            <td className="whitespace-nowrap px-4 py-3">
+            <Td strong>{stock.stock_id}</Td>
+            <Td>{getName(stock)}</Td>
+            <Td>{fmtPrice(stock.close)}</Td>
+            <Td>{fmt1(stock.turnover_100m)}</Td>
+            <Td>{fmt1(stock.volume_ratio)}</Td>
+            <Td>
               <Badge text={getTag(stock)} tone="red" />
-            </td>
+            </Td>
           </tr>
         ))}
       </tbody>
-    </table>
+    </TableShell>
   )
 }
 
@@ -264,13 +260,10 @@ export function StockTable({
 }) {
   if (!rows.length) return <EmptyState />
 
-  return (
-    <div className="overflow-x-auto rounded-2xl bg-white shadow-sm ring-1 ring-slate-100">
-      {variant === 'starting' && <StartingTable rows={rows} />}
-      {variant === 'secondWave' && <SecondWaveTable rows={rows} />}
-      {variant === 'acceleration' && <AccelerationTable rows={rows} />}
-      {variant === 'strategy' && <StrategyTable rows={rows} />}
-      {variant === 'default' && <StrategyTable rows={rows} />}
-    </div>
-  )
+  if (variant === 'starting') return <StartingTable rows={rows} />
+  if (variant === 'secondWave') return <SecondWaveTable rows={rows} />
+  if (variant === 'acceleration') return <AccelerationTable rows={rows} />
+  if (variant === 'strategy') return <StrategyTable rows={rows} />
+
+  return <StrategyTable rows={rows} />
 }
