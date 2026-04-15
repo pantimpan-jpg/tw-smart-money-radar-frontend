@@ -1,10 +1,10 @@
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  'http://localhost:8000'
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
 
-async function fetcher<T>(path: string): Promise<T> {
+async function fetcher<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     cache: 'no-store',
+    ...init,
   })
 
   if (!response.ok) {
@@ -14,45 +14,77 @@ async function fetcher<T>(path: string): Promise<T> {
   return response.json()
 }
 
-export type ScanStock = {
+/**
+ * =========================
+ * 掃描器首頁相容格式
+ * =========================
+ */
+
+export type StockRow = {
   stock_id: string
   name?: string
   stock_name?: string
+  theme?: string
+  group?: string
   close?: number
-  change_pct?: number
   volume_ratio?: number
   turnover_100m?: number
   score?: number
   score_total?: number
-  tag?: string
   radar_tag?: string
-  theme?: string
-  group?: string
-  pct_5d?: number
-  pct_20d?: number
-  revenue_yoy?: number
-  revenue_mom?: number
+  tag?: string
   institution_score?: number
   broker_score?: number
   main_force_score?: number
+  revenue_yoy?: number
+  revenue_mom?: number
+  pct_5d?: number
+  pct_20d?: number
+  change_pct?: number
+}
+
+export type ScanPayload = {
+  summary: {
+    market_scanned: number
+    selected: number
+    starting_count: number
+    second_wave_count: number
+    overheated_count: number
+  }
+  top30: StockRow[]
+  watchlist: StockRow[]
+  starting: StockRow[]
+  second_wave: StockRow[]
+  broker_track: StockRow[]
+  overheated: StockRow[]
+  high_turnover: StockRow[]
+  all_selected: StockRow[]
 }
 
 export type LatestScanResponse = {
   updated_at?: string
-  market_summary?: {
-    total_stocks?: number
-    rising_count?: number
-    limit_up_count?: number
-    high_turnover_count?: number
-  }
-
-  starting_stocks?: ScanStock[]
-  second_wave_stocks?: ScanStock[]
-  acceleration_stocks?: ScanStock[]
-  high_turnover_stocks?: ScanStock[]
-  overheated_stocks?: ScanStock[]
-  watchlist_stocks?: ScanStock[]
+  data: ScanPayload
 }
+
+export async function getLatestScan(): Promise<LatestScanResponse | null> {
+  try {
+    return await fetcher<LatestScanResponse>('/api/scan/latest')
+  } catch {
+    return null
+  }
+}
+
+export async function runScan() {
+  return fetcher('/api/scan/run', {
+    method: 'POST',
+  })
+}
+
+/**
+ * =========================
+ * 個股詳細頁新格式
+ * =========================
+ */
 
 export type StockOverview = {
   stock_id: string
@@ -150,52 +182,76 @@ export type StockDetailResponse = {
   broker_branches?: BrokerBranchItem[]
 }
 
-export async function getLatestScan(): Promise<LatestScanResponse> {
-  return fetcher<LatestScanResponse>('/api/latest-scan')
-}
-
 export async function getStockDetail(
   stockId: string
-): Promise<StockDetailResponse> {
-  return fetcher<StockDetailResponse>(`/api/stocks/${stockId}`)
+): Promise<StockDetailResponse | null> {
+  try {
+    return await fetcher<StockDetailResponse>(`/api/stocks/${stockId}`)
+  } catch {
+    return null
+  }
 }
 
 export async function getStockRevenue(
   stockId: string
 ): Promise<RevenueItem[]> {
-  return fetcher<RevenueItem[]>(`/api/stocks/${stockId}/revenues`)
+  try {
+    return await fetcher<RevenueItem[]>(`/api/stocks/${stockId}/revenues`)
+  } catch {
+    return []
+  }
 }
 
 export async function getStockEps(
   stockId: string
 ): Promise<EpsItem[]> {
-  return fetcher<EpsItem[]>(`/api/stocks/${stockId}/eps`)
+  try {
+    return await fetcher<EpsItem[]>(`/api/stocks/${stockId}/eps`)
+  } catch {
+    return []
+  }
 }
 
 export async function getStockDividends(
   stockId: string
 ): Promise<DividendItem[]> {
-  return fetcher<DividendItem[]>(`/api/stocks/${stockId}/dividends`)
+  try {
+    return await fetcher<DividendItem[]>(`/api/stocks/${stockId}/dividends`)
+  } catch {
+    return []
+  }
 }
 
 export async function getStockFinancials(
   stockId: string
 ): Promise<FinancialStatementItem[]> {
-  return fetcher<FinancialStatementItem[]>(
-    `/api/stocks/${stockId}/financials`
-  )
+  try {
+    return await fetcher<FinancialStatementItem[]>(
+      `/api/stocks/${stockId}/financials`
+    )
+  } catch {
+    return []
+  }
 }
 
 export async function getStockNews(
   stockId: string
 ): Promise<NewsItem[]> {
-  return fetcher<NewsItem[]>(`/api/stocks/${stockId}/news`)
+  try {
+    return await fetcher<NewsItem[]>(`/api/stocks/${stockId}/news`)
+  } catch {
+    return []
+  }
 }
 
 export async function getStockBrokerBranches(
   stockId: string
 ): Promise<BrokerBranchItem[]> {
-  return fetcher<BrokerBranchItem[]>(
-    `/api/stocks/${stockId}/broker-branches`
-  )
+  try {
+    return await fetcher<BrokerBranchItem[]>(
+      `/api/stocks/${stockId}/broker-branches`
+    )
+  } catch {
+    return []
+  }
 }
