@@ -4,6 +4,8 @@ import {
   type DividendItem,
   type EpsItem,
   type FinancialStatementItem,
+  type InstitutionalSummary,
+  type MarginSummary,
   type NewsItem,
   type RevenueItem,
   type StockDetailResponse,
@@ -13,28 +15,6 @@ type PageProps = {
   params: {
     stock_id: string
   }
-}
-
-type WindowSummary = {
-  d1?: number | null
-  d5?: number | null
-  d10?: number | null
-  d20?: number | null
-}
-
-type InstitutionalSummary = {
-  latest_date?: string | null
-  foreign?: WindowSummary
-  trust?: WindowSummary
-  dealer?: WindowSummary
-}
-
-type MarginSummary = {
-  latest_date?: string | null
-  margin_balance?: number | null
-  short_balance?: number | null
-  margin?: WindowSummary
-  short?: WindowSummary
 }
 
 function fmtNumber(value?: number | null, digits = 2) {
@@ -338,7 +318,26 @@ export default async function StockDetailPage({ params }: PageProps) {
   const stockId = params.stock_id
   const detail: StockDetailResponse | null = await getStockDetail(stockId)
 
-  const overview = detail?.overview
+  if (!detail) {
+    return (
+      <main className="mx-auto max-w-7xl px-4 py-6">
+        <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-100">
+          <div className="text-xl font-bold text-slate-900">找不到這檔股票資料</div>
+          <p className="mt-2 text-slate-600">請確認股號是否正確，或稍後再試。</p>
+          <div className="mt-4">
+            <Link
+              href="/stocks"
+              className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+            >
+              返回搜尋頁
+            </Link>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  const { meta, overview } = detail
   const stockName = overview?.stock_name || stockId
 
   const revenues = detail?.revenues ?? []
@@ -347,14 +346,8 @@ export default async function StockDetailPage({ params }: PageProps) {
   const financials = detail?.financials ?? []
   const news = detail?.news ?? []
   const brokerBranches = detail?.broker_branches ?? []
-
-  const institutionalSummary = (detail as StockDetailResponse & {
-    institutional_summary?: InstitutionalSummary
-  } | null)?.institutional_summary
-
-  const marginSummary = (detail as StockDetailResponse & {
-    margin_summary?: MarginSummary
-  } | null)?.margin_summary
+  const institutionalSummary = detail?.institutional_summary
+  const marginSummary = detail?.margin_summary
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
@@ -368,7 +361,7 @@ export default async function StockDetailPage({ params }: PageProps) {
               {stockId} {stockName}
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-              先把個股頁完整接起來，後面再慢慢補你要的券商分點、第二波判斷、支撐壓力與劇本區塊。
+              搜尋股票與榜單股票共用同一頁面。{meta.in_selected ? '這檔有進今日榜單。' : '這檔未進今日榜單，但資料仍完整顯示。'}
             </p>
 
             <div className="mt-5 flex flex-wrap gap-3">
@@ -382,18 +375,16 @@ export default async function StockDetailPage({ params }: PageProps) {
                 href="/stocks"
                 className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/15 transition hover:bg-white/15"
               >
-                查看全清單
+                搜尋股票
               </Link>
             </div>
           </div>
 
           <div className="rounded-3xl bg-white/10 p-4 ring-1 ring-white/10">
             <div className="text-sm text-slate-300">資料狀態</div>
-            <div className="mt-2 text-lg font-semibold text-white">
-              {detail ? '已接 API' : '尚未取得資料'}
-            </div>
+            <div className="mt-2 text-lg font-semibold text-white">{meta.label}</div>
             <div className="mt-1 text-sm text-slate-300">
-              {detail ? '有資料就顯示，沒有資料就安全 fallback。' : '後端 API 準備好後會自動顯示。'}
+              {meta.in_selected ? '有模型標籤與分數。' : '沒有模型分數，但個股資料照常顯示。'}
             </div>
           </div>
         </div>
@@ -408,12 +399,12 @@ export default async function StockDetailPage({ params }: PageProps) {
         <StatCard
           title="外資當日買賣超"
           value={fmtSigned(institutionalSummary?.foreign?.d1)}
-          hint={institutionalSummary?.latest_date ? `${institutionalSummary.latest_date} / 單位：張` : overview?.industry || '單位：張'}
+          hint={institutionalSummary?.latest_date ? `${institutionalSummary.latest_date} / 單位：張` : '單位：張'}
         />
         <StatCard
           title="投信當日買賣超"
           value={fmtSigned(institutionalSummary?.trust?.d1)}
-          hint={institutionalSummary?.latest_date ? `${institutionalSummary.latest_date} / 單位：張` : overview?.theme || '單位：張'}
+          hint={institutionalSummary?.latest_date ? `${institutionalSummary.latest_date} / 單位：張` : '單位：張'}
         />
         <StatCard
           title="融資 / 融券當日變化"
@@ -438,16 +429,20 @@ export default async function StockDetailPage({ params }: PageProps) {
           hint={overview?.pb_ratio !== undefined ? `PBR ${fmtNumber(overview.pb_ratio, 2)}` : '待補'}
         />
         <StatCard
-          title="籌碼 / 主力分數"
+          title={meta.in_selected ? '籌碼 / 主力分數' : '今日榜單狀態'}
           value={
-            overview?.main_force_score !== undefined
-              ? fmtNumber(overview.main_force_score, 1)
-              : '待補'
+            meta.in_selected
+              ? overview?.main_force_score !== undefined && overview?.main_force_score !== null
+                ? fmtNumber(overview.main_force_score, 1)
+                : '待補'
+              : meta.label
           }
           hint={
-            overview?.broker_score !== undefined
-              ? `券商分數 ${fmtNumber(overview.broker_score, 1)}`
-              : '待補'
+            meta.in_selected
+              ? overview?.broker_score !== undefined && overview?.broker_score !== null
+                ? `券商分數 ${fmtNumber(overview.broker_score, 1)}`
+                : '待補'
+              : '這檔未進今日榜單'
           }
         />
         <StatCard
@@ -457,19 +452,12 @@ export default async function StockDetailPage({ params }: PageProps) {
               ? `${fmtNumber(overview.support_price, 2)} / ${fmtNumber(overview.pressure_price, 2)}`
               : '待補'
           }
-          hint={overview?.radar_tag || overview?.technical_tag || '待補'}
+          hint={meta.in_selected ? (overview?.radar_tag || overview?.technical_tag || '待補') : '搜尋模式不顯示型態評分'}
         />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-2">
-        <SectionCard
-          title="EPS"
-          extra={
-            <div className="text-sm text-slate-500">
-              近 4 季
-            </div>
-          }
-        >
+        <SectionCard title="EPS" extra={<div className="text-sm text-slate-500">近 4 季</div>}>
           <PlaceholderChart
             title="EPS 趨勢圖"
             subtitle="顯示近一年季度 EPS。"
@@ -487,14 +475,7 @@ export default async function StockDetailPage({ params }: PageProps) {
           />
         </SectionCard>
 
-        <SectionCard
-          title="月營收"
-          extra={
-            <div className="text-sm text-slate-500">
-              近 12 個月
-            </div>
-          }
-        >
+        <SectionCard title="月營收" extra={<div className="text-sm text-slate-500">近 12 個月</div>}>
           <PlaceholderChart
             title="月營收趨勢圖"
             subtitle="顯示近一年月營收，已轉成較精簡數字。"
@@ -530,12 +511,13 @@ export default async function StockDetailPage({ params }: PageProps) {
             rows={[
               ['產業', overview?.industry || '待補'],
               ['主題', overview?.theme || '待補'],
-              ['技術標籤', overview?.technical_tag || '待補'],
-              ['雷達標籤', overview?.radar_tag || '待補'],
-              ['法人分數', overview?.institution_score !== undefined ? fmtNumber(overview.institution_score, 1) : '待補'],
-              ['券商分數', overview?.broker_score !== undefined ? fmtNumber(overview.broker_score, 1) : '待補'],
-              ['主力分數', overview?.main_force_score !== undefined ? fmtNumber(overview.main_force_score, 1) : '待補'],
-              ['最終分數', overview?.final_score !== undefined ? fmtNumber(overview.final_score, 1) : '待補'],
+              ['今日榜單狀態', meta.label],
+              ['技術標籤', meta.in_selected ? (overview?.technical_tag || '待補') : '未進榜不顯示'],
+              ['雷達標籤', meta.in_selected ? (overview?.radar_tag || '待補') : '未進榜不顯示'],
+              ['法人分數', meta.in_selected ? (overview?.institution_score !== undefined && overview?.institution_score !== null ? fmtNumber(overview.institution_score, 1) : '待補') : '未進榜不顯示'],
+              ['券商分數', meta.in_selected ? (overview?.broker_score !== undefined && overview?.broker_score !== null ? fmtNumber(overview.broker_score, 1) : '待補') : '未進榜不顯示'],
+              ['主力分數', meta.in_selected ? (overview?.main_force_score !== undefined && overview?.main_force_score !== null ? fmtNumber(overview.main_force_score, 1) : '待補') : '未進榜不顯示'],
+              ['最終分數', meta.in_selected ? (overview?.final_score !== undefined && overview?.final_score !== null ? fmtNumber(overview.final_score, 1) : '待補') : '未進榜不顯示'],
               ['外資當日', fmtSigned(institutionalSummary?.foreign?.d1)],
               ['投信當日', fmtSigned(institutionalSummary?.trust?.d1)],
               ['自營商當日', fmtSigned(institutionalSummary?.dealer?.d1)],
@@ -547,28 +529,14 @@ export default async function StockDetailPage({ params }: PageProps) {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-2">
-        <SectionCard
-          title="法人買賣超變化"
-          extra={
-            <div className="text-sm text-slate-500">
-              單位：張
-            </div>
-          }
-        >
+        <SectionCard title="法人買賣超變化" extra={<div className="text-sm text-slate-500">單位：張</div>}>
           <SimpleTable
             headers={['法人', '當日', '5日', '10日', '20日']}
             rows={buildInstitutionalRows(institutionalSummary)}
           />
         </SectionCard>
 
-        <SectionCard
-          title="融資融券變化"
-          extra={
-            <div className="text-sm text-slate-500">
-              單位：張
-            </div>
-          }
-        >
+        <SectionCard title="融資融券變化" extra={<div className="text-sm text-slate-500">單位：張</div>}>
           <SimpleTable
             headers={['項目', '當日', '5日', '10日', '20日', '目前餘額']}
             rows={buildMarginRows(marginSummary)}
