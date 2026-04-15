@@ -92,7 +92,7 @@ function PlaceholderChart({
 }: {
   title: string
   subtitle: string
-  data: Array<{ label: string; value?: number | null; sub1?: string; sub2?: string }>
+  data: Array<{ label: string; value?: number | null }>
   footer?: string
 }) {
   const validValues = data
