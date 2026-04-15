@@ -14,12 +14,6 @@ async function fetcher<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json()
 }
 
-/**
- * =========================
- * 掃描器首頁相容格式
- * =========================
- */
-
 export type StockRow = {
   stock_id: string
   name?: string
@@ -80,47 +74,43 @@ export async function runScan() {
   })
 }
 
-/**
- * =========================
- * 個股詳細頁新格式
- * =========================
- */
+export type StockMeta = {
+  stock_id: string
+  in_selected: boolean
+  source: string
+  has_scoring: boolean
+  label: string
+}
 
 export type StockOverview = {
   stock_id: string
   stock_name: string
   industry?: string
   theme?: string
-
   close?: number
   change?: number
   change_pct?: number
   volume?: number
   turnover_100m?: number
-
   market_cap_100m?: number
   pe_ratio?: number
   pb_ratio?: number
   dividend_yield?: number
-
   foreign_buy_sell?: number
   investment_trust_buy_sell?: number
   dealer_buy_sell?: number
-
   margin_balance?: number
   short_balance?: number
   margin_change?: number
   short_change?: number
-
-  institution_score?: number
-  broker_score?: number
-  main_force_score?: number
-  final_score?: number
-
-  technical_tag?: string
-  radar_tag?: string
-  support_price?: number
-  pressure_price?: number
+  institution_score?: number | null
+  broker_score?: number | null
+  main_force_score?: number | null
+  final_score?: number | null
+  technical_tag?: string | null
+  radar_tag?: string | null
+  support_price?: number | null
+  pressure_price?: number | null
 }
 
 export type RevenueItem = {
@@ -172,7 +162,30 @@ export type BrokerBranchItem = {
   net?: number
 }
 
+export type WindowSummary = {
+  d1?: number | null
+  d5?: number | null
+  d10?: number | null
+  d20?: number | null
+}
+
+export type InstitutionalSummary = {
+  latest_date?: string | null
+  foreign?: WindowSummary
+  trust?: WindowSummary
+  dealer?: WindowSummary
+}
+
+export type MarginSummary = {
+  latest_date?: string | null
+  margin_balance?: number | null
+  short_balance?: number | null
+  margin?: WindowSummary
+  short?: WindowSummary
+}
+
 export type StockDetailResponse = {
+  meta: StockMeta
   overview: StockOverview
   revenues: RevenueItem[]
   eps_list: EpsItem[]
@@ -180,6 +193,20 @@ export type StockDetailResponse = {
   financials: FinancialStatementItem[]
   news: NewsItem[]
   broker_branches?: BrokerBranchItem[]
+  institutional_summary?: InstitutionalSummary
+  margin_summary?: MarginSummary
+}
+
+export type SearchStockItem = {
+  stock_id: string
+  name?: string
+  close?: number
+  group?: string | null
+  theme?: string | null
+  turnover_100m?: number | null
+  in_selected: boolean
+  radar_tag?: string | null
+  score_total?: number | null
 }
 
 export async function getStockDetail(
@@ -192,65 +219,15 @@ export async function getStockDetail(
   }
 }
 
-export async function getStockRevenue(
-  stockId: string
-): Promise<RevenueItem[]> {
+export async function searchStocks(
+  q: string,
+  limit = 50
+): Promise<SearchStockItem[]> {
   try {
-    return await fetcher<RevenueItem[]>(`/api/stocks/${stockId}/revenues`)
-  } catch {
-    return []
-  }
-}
-
-export async function getStockEps(
-  stockId: string
-): Promise<EpsItem[]> {
-  try {
-    return await fetcher<EpsItem[]>(`/api/stocks/${stockId}/eps`)
-  } catch {
-    return []
-  }
-}
-
-export async function getStockDividends(
-  stockId: string
-): Promise<DividendItem[]> {
-  try {
-    return await fetcher<DividendItem[]>(`/api/stocks/${stockId}/dividends`)
-  } catch {
-    return []
-  }
-}
-
-export async function getStockFinancials(
-  stockId: string
-): Promise<FinancialStatementItem[]> {
-  try {
-    return await fetcher<FinancialStatementItem[]>(
-      `/api/stocks/${stockId}/financials`
-    )
-  } catch {
-    return []
-  }
-}
-
-export async function getStockNews(
-  stockId: string
-): Promise<NewsItem[]> {
-  try {
-    return await fetcher<NewsItem[]>(`/api/stocks/${stockId}/news`)
-  } catch {
-    return []
-  }
-}
-
-export async function getStockBrokerBranches(
-  stockId: string
-): Promise<BrokerBranchItem[]> {
-  try {
-    return await fetcher<BrokerBranchItem[]>(
-      `/api/stocks/${stockId}/broker-branches`
-    )
+    const params = new URLSearchParams()
+    if (q) params.set('q', q)
+    params.set('limit', String(limit))
+    return await fetcher<SearchStockItem[]>(`/api/stocks?${params.toString()}`)
   } catch {
     return []
   }
