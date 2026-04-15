@@ -277,7 +277,7 @@ export default function HomePage() {
                     偏第一波初動，重點看平台突破、量能與短均線翻揚。
                   </p>
                 </div>
-                <StockTable rows={(data.starting ?? []).slice(0, 10)} />
+                <StockTable rows={(data.starting ?? []).slice(0, 10)} variant="starting" />
               </div>
 
               <div className="space-y-3">
@@ -287,17 +287,17 @@ export default function HomePage() {
                     偏整理後再攻，後面應補第一波、整理天數與回檔品質欄位。
                   </p>
                 </div>
-                <StockTable rows={(data.second_wave ?? []).slice(0, 10)} />
+                <StockTable rows={(data.second_wave ?? []).slice(0, 10)} variant="secondWave" />
               </div>
 
               <div className="space-y-3">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">主升段加速</h3>
                   <p className="mt-1 text-sm text-slate-500">
-                    目前先暫用 Top30 代理，之後可改成獨立 acceleration 模型。
+                    目前以前排強勢股代理，後續再正式拆成獨立主升段模型。
                   </p>
                 </div>
-                <StockTable rows={accelerationRows} />
+                <StockTable rows={accelerationRows} variant="acceleration" />
               </div>
             </div>
           </section>
@@ -308,7 +308,7 @@ export default function HomePage() {
                 title="特殊策略：高成交值"
                 description="先保留最實用的一塊，方便看資金真正集中在哪。"
               />
-              <StockTable rows={(data.high_turnover ?? []).slice(0, 10)} />
+              <StockTable rows={(data.high_turnover ?? []).slice(0, 10)} variant="strategy" />
             </div>
 
             <div className="space-y-3">
@@ -316,7 +316,7 @@ export default function HomePage() {
                 title="特殊策略：過熱風險"
                 description="強勢不代表安全，高檔爆量、過熱乖離仍要分開看。"
               />
-              <StockTable rows={(data.overheated ?? []).slice(0, 10)} />
+              <StockTable rows={(data.overheated ?? []).slice(0, 10)} variant="strategy" />
             </div>
           </section>
 
@@ -325,7 +325,7 @@ export default function HomePage() {
               title="Watchlist"
               description="保留你真正想追蹤的標的，後面再接個股頁與劇本區。"
             />
-            <StockTable rows={(data.watchlist ?? []).slice(0, 10)} />
+            <StockTable rows={(data.watchlist ?? []).slice(0, 10)} variant="default" />
           </section>
         </>
       ) : (
