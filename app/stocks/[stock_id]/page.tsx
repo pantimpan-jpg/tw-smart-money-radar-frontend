@@ -1,147 +1,199 @@
-import { notFound } from 'next/navigation'
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-
-async function getStock(stockId: string) {
-  try {
-    const res = await fetch(`${API_BASE}/api/stocks/${stockId}`, { cache: 'no-store' })
-    if (!res.ok) return null
-    return res.json()
-  } catch {
-    return null
+type PageProps = {
+  params: {
+    stock_id: string
   }
 }
 
-function fmt1(value: number | null | undefined) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return '-'
-  return Number(value).toFixed(1)
-}
-
-function fmt2(value: number | null | undefined) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return '-'
-  return Number(value).toFixed(2)
-}
-
-function InfoCard({
+function StatCard({
   title,
   value,
+  hint,
 }: {
   title: string
-  value: string | number | null | undefined
+  value: string
+  hint?: string
 }) {
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm">
+    <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
       <div className="text-sm text-slate-500">{title}</div>
-      <div className="mt-2 text-xl font-bold text-slate-900">{value ?? '-'}</div>
+      <div className="mt-2 text-2xl font-bold tracking-tight text-slate-900">{value}</div>
+      {hint ? <div className="mt-1 text-sm text-slate-600">{hint}</div> : null}
     </div>
   )
 }
 
-export default async function StockDetailPage({
-  params,
+function SectionCard({
+  title,
+  children,
 }: {
-  params: { stock_id: string }
+  title: string
+  children: React.ReactNode
 }) {
-  const stock = await getStock(params.stock_id)
-  if (!stock) return notFound()
+  return (
+    <section className="rounded-3xl bg-white shadow-sm ring-1 ring-slate-100">
+      <div className="border-b border-slate-100 px-6 py-4">
+        <h2 className="text-lg font-bold text-slate-900">{title}</h2>
+      </div>
+      <div className="p-6">{children}</div>
+    </section>
+  )
+}
 
-  const score = stock.score ?? stock.score_total ?? '-'
-  const tag = stock.tag ?? stock.radar_tag ?? '-'
+function PlaceholderChart({
+  title,
+  subtitle,
+}: {
+  title: string
+  subtitle: string
+}) {
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6">
+      <div className="text-base font-semibold text-slate-900">{title}</div>
+      <div className="mt-2 text-sm text-slate-500">{subtitle}</div>
+      <div className="mt-6 flex h-52 items-center justify-center rounded-xl bg-white text-sm text-slate-400 ring-1 ring-slate-100">
+        之後接入真實圖表資料
+      </div>
+    </div>
+  )
+}
 
-  const reasonText = stock.reason_text ?? '目前尚未提供入選原因摘要'
-  const reasonList: string[] = Array.isArray(stock.reason_list) ? stock.reason_list : []
+function SimpleTable({
+  headers,
+  rows,
+}: {
+  headers: string[]
+  rows: Array<Array<string | number>>
+}) {
+  return (
+    <div className="overflow-x-auto rounded-2xl ring-1 ring-slate-100">
+      <table className="min-w-full text-sm">
+        <thead className="bg-slate-50">
+          <tr>
+            {headers.map((header) => (
+              <th
+                key={header}
+                className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700"
+              >
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex} className="border-t border-slate-100">
+              {row.map((cell, cellIndex) => (
+                <td key={cellIndex} className="whitespace-nowrap px-4 py-3 text-slate-800">
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
 
-  const targetPrice = stock.target_price
-  const resistanceLow = stock.resistance_low
-  const resistanceHigh = stock.resistance_high
+export default function StockDetailPage({ params }: PageProps) {
+  const stockId = params.stock_id
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
-      <section className="rounded-3xl bg-slate-900 p-8 text-white">
-        <div className="flex flex-wrap items-end justify-between gap-4">
+    <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
+      <section className="rounded-[28px] bg-slate-900 px-6 py-7 text-white shadow-sm md:px-8 md:py-8">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="text-sm text-slate-300">個股詳情</div>
-            <h1 className="mt-2 text-3xl font-bold">
-              {stock.stock_id} {stock.name}
-            </h1>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full bg-white/10 px-3 py-1 text-sm">
-                標籤：{tag}
-              </span>
-              <span className="rounded-full bg-white/10 px-3 py-1 text-sm">
-                總分：{score}
-              </span>
+            <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-white/15">
+              個股詳細頁 V1
             </div>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">
+              {stockId} 個股頁
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
+              這一頁先把你要的版型骨架搭起來，後面會再逐步接入股價、法人、融資、月營收、EPS、股利、財報與新聞資料。
+            </p>
           </div>
 
-          <div className="rounded-2xl bg-white/10 px-5 py-4">
-            <div className="text-sm text-slate-300">現價</div>
-            <div className="mt-1 text-3xl font-bold">{stock.close}</div>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-4">
-        <InfoCard title="量比" value={fmt1(stock.volume_ratio)} />
-        <InfoCard title="成交值(億)" value={fmt1(stock.turnover_100m)} />
-        <InfoCard title="模型目標價" value={fmt2(targetPrice)} />
-        <InfoCard
-          title="壓力區"
-          value={
-            resistanceLow != null && resistanceHigh != null
-              ? `${fmt2(resistanceLow)} ~ ${fmt2(resistanceHigh)}`
-              : '-'
-          }
-        />
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-3xl bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-slate-900">入選原因摘要</h2>
-          <p className="mt-4 leading-7 text-slate-700">{reasonText}</p>
-
-          <h3 className="mt-6 text-lg font-semibold text-slate-900">細項理由</h3>
-          {reasonList.length > 0 ? (
-            <ul className="mt-3 space-y-2 text-slate-700">
-              {reasonList.map((item, idx) => (
-                <li key={`${item}-${idx}`} className="rounded-xl bg-slate-50 px-4 py-3">
-                  {item}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="mt-3 text-slate-500">目前尚未提供細項理由</div>
-          )}
-        </div>
-
-        <div className="rounded-3xl bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-slate-900">模型數據</h2>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <InfoCard title="技術分數" value={fmt1(stock.tech_score)} />
-            <InfoCard title="法人分數" value={fmt1(stock.institution_score)} />
-            <InfoCard title="主力分數" value={fmt1(stock.main_force_score)} />
-            <InfoCard title="分點分數" value={fmt1(stock.broker_score)} />
-            <InfoCard title="突破分數" value={fmt1(stock.breakout_score)} />
-            <InfoCard title="營收分數" value={fmt1(stock.revenue_score)} />
-            <InfoCard title="起漲分數" value={fmt1(stock.score_starting)} />
-            <InfoCard title="第二波分數" value={fmt1(stock.score_second_wave)} />
+          <div className="rounded-3xl bg-white/10 p-4 ring-1 ring-white/10">
+            <div className="text-sm text-slate-300">目前狀態</div>
+            <div className="mt-2 text-lg font-semibold text-white">版型已建立，等待串接資料</div>
           </div>
         </div>
       </section>
 
-      <section className="rounded-3xl bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-slate-900">技術欄位參考</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <InfoCard title="MA20" value={fmt2(stock.ma20)} />
-          <InfoCard title="MA60" value={fmt2(stock.ma60)} />
-          <InfoCard title="RSI" value={fmt1(stock.rsi)} />
-          <InfoCard title="MACD" value={fmt2(stock.macd)} />
-          <InfoCard title="MACD Signal" value={fmt2(stock.macd_signal)} />
-          <InfoCard title="MACD Hist" value={fmt2(stock.macd_hist)} />
-          <InfoCard title="20日平台高點" value={fmt2(stock.platform_high_20d)} />
-          <InfoCard title="60日平台高點" value={fmt2(stock.platform_high_60d)} />
-        </div>
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard title="最新收盤價" value="待接資料" hint="TaiwanStockPrice" />
+        <StatCard title="外資買賣超" value="待接資料" hint="Institutional / Shareholding" />
+        <StatCard title="投信買賣超" value="待接資料" hint="Institutional" />
+        <StatCard title="融資變化" value="待接資料" hint="MarginPurchaseShortSale" />
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-2">
+        <SectionCard title="EPS">
+          <PlaceholderChart
+            title="EPS 趨勢圖"
+            subtitle="之後接入季度 EPS、年增、季增與最近一期數值。"
+          />
+        </SectionCard>
+
+        <SectionCard title="月營收">
+          <PlaceholderChart
+            title="月營收趨勢圖"
+            subtitle="之後接入月營收、月增、年增與最近 6–12 個月趨勢。"
+          />
+        </SectionCard>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-2">
+        <SectionCard title="現金股利 / 股票股利">
+          <SimpleTable
+            headers={['年度', '交易日', '發放日', '現金股利', '股票股利']}
+            rows={[
+              ['2025', '待接資料', '待接資料', '待接資料', '待接資料'],
+              ['2024', '待接資料', '待接資料', '待接資料', '待接資料'],
+              ['2023', '待接資料', '待接資料', '待接資料', '待接資料'],
+            ]}
+          />
+        </SectionCard>
+
+        <SectionCard title="籌碼 / 技術摘要">
+          <SimpleTable
+            headers={['項目', '數值']}
+            rows={[
+              ['BIAS', '待接資料'],
+              ['RSV', '待接資料'],
+              ['外資持股比例', '待接資料'],
+              ['主力分數', '待接資料'],
+              ['第二波判斷', '待接資料'],
+            ]}
+          />
+        </SectionCard>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-2">
+        <SectionCard title="財報">
+          <SimpleTable
+            headers={['項目', '年增', '季增', '金額']}
+            rows={[
+              ['基本每股盈餘', '待接資料', '待接資料', '待接資料'],
+              ['營業收入', '待接資料', '待接資料', '待接資料'],
+              ['營業利益', '待接資料', '待接資料', '待接資料'],
+              ['本期淨利', '待接資料', '待接資料', '待接資料'],
+              ['綜合損益總額', '待接資料', '待接資料', '待接資料'],
+            ]}
+          />
+        </SectionCard>
+
+        <SectionCard title="新聞">
+          <SimpleTable
+            headers={['時間', '標題']}
+            rows={[
+              ['待接資料', '之後接 TaiwanStockNews 或其他新聞來源'],
+              ['待接資料', '新聞清單會放在這裡'],
+              ['待接資料', '可再加來源與連結'],
+            ]}
+          />
+        </SectionCard>
       </section>
     </main>
   )
