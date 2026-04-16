@@ -36,6 +36,15 @@ function SummaryCard({
   )
 }
 
+function RestrictionBadge({ text }: { text?: string | null }) {
+  if (!text) return null
+  return (
+    <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">
+      {text}
+    </span>
+  )
+}
+
 function StockSection({
   title,
   subtitle,
@@ -59,10 +68,12 @@ function StockSection({
               <tr>
                 <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">股號</th>
                 <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">名稱</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">主題</th>
                 <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">現價</th>
                 <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">成交值</th>
                 <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">分數</th>
                 <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">標籤</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">交易限制</th>
               </tr>
             </thead>
             <tbody>
@@ -77,6 +88,7 @@ function StockSection({
                       {stock.name || stock.stock_id}
                     </Link>
                   </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-800">{stock.theme || '其他'}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-800">{fmtPrice(stock.close)}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-800">
                     {fmtTurnover(stock.turnover_100m)}
@@ -86,6 +98,9 @@ function StockSection({
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-800">
                     {stock.radar_tag || stock.tag || '待補'}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <RestrictionBadge text={stock.trade_warning} />
                   </td>
                 </tr>
               ))}
@@ -121,7 +136,7 @@ export default async function HomePage() {
               台股主力掃描首頁
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-              先看剛啟動、第二波與 watchlist，再深入個股頁。首頁上方可直接搜尋任意股票。
+              已排除 ETF 與金融股。首頁上方可直接搜尋任意股票，榜單中若有禁現沖、先買現沖、處置或注意股，會醒目標示。
             </p>
           </div>
 
@@ -164,12 +179,6 @@ export default async function HomePage() {
           >
             進入股票清單
           </Link>
-          <Link
-            href="/themes"
-            className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/15 transition hover:bg-white/15"
-          >
-            題材分類
-          </Link>
         </div>
       </section>
 
@@ -181,12 +190,12 @@ export default async function HomePage() {
             <SummaryCard
               title="掃描市場檔數"
               value={data.summary?.market_scanned ?? 0}
-              hint="全市場今日完成掃描"
+              hint="原始全市場掃描檔數"
             />
             <SummaryCard
               title="入選標的"
               value={data.summary?.selected ?? 0}
-              hint="通過模型篩選"
+              hint="排除 ETF / 金融後通過模型篩選"
             />
             <SummaryCard
               title="剛啟動"
