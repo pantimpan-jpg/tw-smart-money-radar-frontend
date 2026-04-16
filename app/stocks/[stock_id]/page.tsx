@@ -157,12 +157,7 @@ function LinePointChart({
 
       <div className="mt-6 rounded-xl bg-white p-4 ring-1 ring-slate-100">
         <svg viewBox="0 0 100 110" className="h-72 w-full overflow-visible">
-          <polyline
-            fill="none"
-            stroke="#1e293b"
-            strokeWidth="2"
-            points={polyline}
-          />
+          <polyline fill="none" stroke="#1e293b" strokeWidth="2" points={polyline} />
           {points.map((p) => (
             <g key={p.label}>
               <circle cx={p.x} cy={p.y} r="2.2" fill="#1e293b" />
@@ -253,7 +248,6 @@ function buildEpsChartData(epsList: EpsItem[]) {
 
 function buildInstitutionalRows(summary?: InstitutionalSummary | null) {
   if (!summary) return []
-
   return [
     ['外資', fmtSigned(summary.foreign?.d1), fmtSigned(summary.foreign?.d5), fmtSigned(summary.foreign?.d10), fmtSigned(summary.foreign?.d20)],
     ['投信', fmtSigned(summary.trust?.d1), fmtSigned(summary.trust?.d5), fmtSigned(summary.trust?.d10), fmtSigned(summary.trust?.d20)],
@@ -263,7 +257,6 @@ function buildInstitutionalRows(summary?: InstitutionalSummary | null) {
 
 function buildMarginRows(summary?: MarginSummary | null) {
   if (!summary) return []
-
   return [
     ['融資', fmtSigned(summary.margin?.d1), fmtSigned(summary.margin?.d5), fmtSigned(summary.margin?.d10), fmtSigned(summary.margin?.d20), summary.margin_balance ?? '待補'],
     ['融券', fmtSigned(summary.short?.d1), fmtSigned(summary.short?.d5), fmtSigned(summary.short?.d10), fmtSigned(summary.short?.d20), summary.short_balance ?? '待補'],
