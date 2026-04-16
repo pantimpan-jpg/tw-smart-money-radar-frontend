@@ -65,28 +65,22 @@ function fmtYiWithUnit(value?: number | null, digits = 1) {
   return `${yi.toFixed(digits)} 億`
 }
 
-function getQuarterShortLabel(quarter: string) {
-  return quarter.replace('20', '')
-}
-
-function getMonthShortLabel(month: string) {
-  return month
-}
-
 function StatCard({
   title,
   value,
   hint,
+  alert = false,
 }: {
   title: string
   value: string
   hint?: string
+  alert?: boolean
 }) {
   return (
     <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
-      <div className="text-sm text-slate-500">{title}</div>
+      <div className={`text-sm ${alert ? 'font-semibold text-red-600' : 'text-slate-500'}`}>{title}</div>
       <div className="mt-2 text-2xl font-bold tracking-tight text-slate-900">{value}</div>
-      {hint ? <div className="mt-1 text-sm text-slate-600">{hint}</div> : null}
+      {hint ? <div className={`mt-1 text-sm ${alert ? 'text-red-600' : 'text-slate-600'}`}>{hint}</div> : null}
     </div>
   )
 }
@@ -111,26 +105,50 @@ function SectionCard({
   )
 }
 
-function PlaceholderChart({
+function LinePointChart({
   title,
   subtitle,
   data,
-  footer,
   unitLabel,
   valueFormatter,
+  footer,
 }: {
   title: string
   subtitle: string
   data: Array<{ label: string; value?: number | null }>
-  footer?: string
   unitLabel?: string
   valueFormatter?: (value?: number | null) => string
+  footer?: string
 }) {
-  const validValues = data
-    .map((item) => item.value)
-    .filter((value): value is number => value !== null && value !== undefined && !Number.isNaN(value))
+  const valid = data.filter((d) => d.value !== null && d.value !== undefined && !Number.isNaN(d.value))
+  if (!valid.length) {
+    return (
+      <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+        <div className="text-base font-semibold text-slate-900">{title}</div>
+        <div className="mt-2 text-sm text-slate-500">{subtitle}</div>
+        <div className="mt-6 flex h-64 items-center justify-center rounded-xl bg-white text-sm text-slate-400 ring-1 ring-slate-100">
+          目前沒有資料
+        </div>
+      </div>
+    )
+  }
 
-  const maxValue = validValues.length ? Math.max(...validValues.map((v) => Math.abs(v)), 1) : 1
+  const values = valid.map((d) => Number(d.value))
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = max - min || 1
+
+  const points = data
+    .map((item, idx) => {
+      const value = item.value
+      if (value === null || value === undefined || Number.isNaN(value)) return null
+      const x = (idx / Math.max(data.length - 1, 1)) * 100
+      const y = 100 - ((Number(value) - min) / range) * 100
+      return { x, y, label: item.label, value: Number(value) }
+    })
+    .filter(Boolean) as Array<{ x: number; y: number; label: string; value: number }>
+
+  const polyline = points.map((p) => `${p.x},${p.y}`).join(' ')
 
   return (
     <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
@@ -138,48 +156,25 @@ function PlaceholderChart({
       <div className="mt-2 text-sm text-slate-500">{subtitle}</div>
 
       <div className="mt-6 rounded-xl bg-white p-4 ring-1 ring-slate-100">
-        <div
-          className={`grid h-64 items-end gap-3 ${
-            data.length >= 10 ? 'grid-cols-12' : data.length >= 6 ? 'grid-cols-6' : 'grid-cols-4'
-          }`}
-        >
-          {data.length ? (
-            data.map((item) => {
-              const raw = item.value
-              const hasValue =
-                raw !== null && raw !== undefined && !Number.isNaN(raw)
-              const height = hasValue
-                ? Math.max((Math.abs(raw) / maxValue) * 100, 8)
-                : 8
-
-              return (
-                <div key={item.label} className="flex h-full min-w-0 flex-col justify-end">
-                  <div className="mb-2 truncate text-center text-[11px] text-slate-400">
-                    {hasValue
-                      ? valueFormatter
-                        ? valueFormatter(raw)
-                        : fmtNumber(raw, 2)
-                      : '待補'}
-                  </div>
-                  <div
-                    className={`rounded-t-xl ${
-                      hasValue ? 'bg-slate-800' : 'bg-slate-200'
-                    }`}
-                    style={{ height: `${height}%` }}
-                  />
-                  <div className="mt-2 truncate text-center text-[11px] text-slate-500">
-                    {item.label}
-                  </div>
-                </div>
-              )
-            })
-          ) : (
-            <div className="col-span-full flex h-full items-center justify-center text-sm text-slate-400">
-              目前沒有資料
-            </div>
-          )}
-        </div>
-
+        <svg viewBox="0 0 100 110" className="h-72 w-full overflow-visible">
+          <polyline
+            fill="none"
+            stroke="#1e293b"
+            strokeWidth="2"
+            points={polyline}
+          />
+          {points.map((p) => (
+            <g key={p.label}>
+              <circle cx={p.x} cy={p.y} r="2.2" fill="#1e293b" />
+              <text x={p.x} y={p.y - 4} textAnchor="middle" fontSize="3" fill="#64748b">
+                {valueFormatter ? valueFormatter(p.value) : fmtNumber(p.value, 1)}
+              </text>
+              <text x={p.x} y="108" textAnchor="middle" fontSize="3" fill="#64748b">
+                {p.label}
+              </text>
+            </g>
+          ))}
+        </svg>
         {unitLabel ? (
           <div className="mt-3 text-right text-xs text-slate-400">單位：{unitLabel}</div>
         ) : null}
@@ -236,61 +231,22 @@ function SimpleTable({
   )
 }
 
-function buildRevenueRows(revenues: RevenueItem[]) {
-  return revenues.slice(0, 12).map((item) => [
-    item.date,
-    item.revenue !== undefined ? fmtYi(item.revenue, 1) : '待補',
-    item.revenue_mom !== undefined ? fmtPercent(item.revenue_mom, 1) : '待補',
-    item.revenue_yoy !== undefined ? fmtPercent(item.revenue_yoy, 1) : '待補',
-  ])
-}
-
-function buildDividendRows(dividends: DividendItem[]) {
-  return dividends.slice(0, 8).map((item) => [
-    item.year,
-    fmtDate(item.ex_dividend_date),
-    fmtDate(item.payment_date),
-    item.cash_dividend !== undefined ? fmtNumber(item.cash_dividend, 2) : '待補',
-    item.stock_dividend !== undefined ? fmtNumber(item.stock_dividend, 2) : '待補',
-    item.dividend_yield !== undefined ? fmtPercent(item.dividend_yield, 2) : '待補',
-  ])
-}
-
-function buildFinancialRows(financials: FinancialStatementItem[]) {
-  return financials.slice(0, 8).map((item) => [
-    item.period,
-    item.revenue !== undefined ? fmtYi(item.revenue, 1) : '待補',
-    item.gross_profit !== undefined ? fmtYi(item.gross_profit, 1) : '待補',
-    item.operating_income !== undefined ? fmtYi(item.operating_income, 1) : '待補',
-    item.net_income !== undefined ? fmtYi(item.net_income, 1) : '待補',
-    item.eps !== undefined ? fmtNumber(item.eps, 2) : '待補',
-  ])
-}
-
-function buildNewsRows(news: NewsItem[]) {
-  return news.slice(0, 10).map((item) => [
-    item.published_at || '待補',
-    item.source || '待補',
-    item.title,
-  ])
-}
-
 function buildRevenueChartData(revenues: RevenueItem[]) {
   return revenues
     .slice(0, 12)
     .reverse()
     .map((item) => ({
-      label: getMonthShortLabel(item.date),
+      label: item.date,
       value: toYi(item.revenue),
     }))
 }
 
 function buildEpsChartData(epsList: EpsItem[]) {
   return epsList
-    .slice(0, 4)
+    .slice(0, 8)
     .reverse()
     .map((item) => ({
-      label: getQuarterShortLabel(item.quarter),
+      label: item.quarter,
       value: item.eps,
     }))
 }
@@ -323,15 +279,6 @@ export default async function StockDetailPage({ params }: PageProps) {
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-100">
           <div className="text-xl font-bold text-slate-900">找不到這檔股票資料</div>
-          <p className="mt-2 text-slate-600">請確認股號是否正確，或稍後再試。</p>
-          <div className="mt-4">
-            <Link
-              href="/stocks"
-              className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white"
-            >
-              返回搜尋頁
-            </Link>
-          </div>
         </div>
       </main>
     )
@@ -339,45 +286,20 @@ export default async function StockDetailPage({ params }: PageProps) {
 
   const { meta, overview } = detail
   const stockName = overview?.stock_name || stockId
-
-  const revenues = detail?.revenues ?? []
-  const epsList = detail?.eps_list ?? []
-  const dividends = detail?.dividends ?? []
-  const financials = detail?.financials ?? []
-  const news = detail?.news ?? []
-  const brokerBranches = detail?.broker_branches ?? []
-  const institutionalSummary = detail?.institutional_summary
-  const marginSummary = detail?.margin_summary
+  const tradeWarning = overview?.trade_warning || ''
+  const hasRestriction = Boolean(tradeWarning)
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
       <section className="rounded-[28px] bg-slate-900 px-6 py-7 text-white shadow-sm md:px-8 md:py-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-white/15">
-              個股詳細頁 V1
-            </div>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">
+            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
               {stockId} {stockName}
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
               搜尋股票與榜單股票共用同一頁面。{meta.in_selected ? '這檔有進今日榜單。' : '這檔未進今日榜單，但資料仍完整顯示。'}
             </p>
-
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Link
-                href="/"
-                className="rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-100"
-              >
-                返回首頁
-              </Link>
-              <Link
-                href="/stocks"
-                className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/15 transition hover:bg-white/15"
-              >
-                搜尋股票
-              </Link>
-            </div>
           </div>
 
           <div className="rounded-3xl bg-white/10 p-4 ring-1 ring-white/10">
@@ -388,28 +310,50 @@ export default async function StockDetailPage({ params }: PageProps) {
             </div>
           </div>
         </div>
+
+        {hasRestriction ? (
+          <div className="mt-5 rounded-2xl bg-red-500/15 px-4 py-3 text-sm font-medium text-red-200 ring-1 ring-red-400/30">
+            交易限制提醒：{tradeWarning}
+          </div>
+        ) : null}
+
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Link
+            href="/"
+            className="rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-900"
+          >
+            返回首頁
+          </Link>
+          <Link
+            href="/stocks"
+            className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/15"
+          >
+            搜尋股票
+          </Link>
+        </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="最新收盤價"
           value={overview?.close !== undefined ? fmtNumber(overview.close, 2) : '待補'}
-          hint={overview?.change_pct !== undefined ? `漲跌幅 ${fmtPercent(overview.change_pct, 2)}` : 'TaiwanStockPrice'}
+          hint={overview?.change_pct !== undefined ? `漲跌幅 ${fmtPercent(overview.change_pct, 2)}` : '待補'}
         />
         <StatCard
           title="外資當日買賣超"
-          value={fmtSigned(institutionalSummary?.foreign?.d1)}
-          hint={institutionalSummary?.latest_date ? `${institutionalSummary.latest_date} / 單位：張` : '單位：張'}
+          value={fmtSigned(detail?.institutional_summary?.foreign?.d1)}
+          hint={detail?.institutional_summary?.latest_date ? `${detail.institutional_summary.latest_date} / 單位：張` : '單位：張'}
         />
         <StatCard
           title="投信當日買賣超"
-          value={fmtSigned(institutionalSummary?.trust?.d1)}
-          hint={institutionalSummary?.latest_date ? `${institutionalSummary.latest_date} / 單位：張` : '單位：張'}
+          value={fmtSigned(detail?.institutional_summary?.trust?.d1)}
+          hint={detail?.institutional_summary?.latest_date ? `${detail.institutional_summary.latest_date} / 單位：張` : '單位：張'}
         />
         <StatCard
           title="融資 / 融券當日變化"
-          value={`${fmtSigned(marginSummary?.margin?.d1)} / ${fmtSigned(marginSummary?.short?.d1)}`}
-          hint={marginSummary?.latest_date ? `${marginSummary.latest_date} / 單位：張` : '單位：張'}
+          value={`${fmtSigned(detail?.margin_summary?.margin?.d1)} / ${fmtSigned(detail?.margin_summary?.short?.d1)}`}
+          hint={detail?.margin_summary?.latest_date ? `${detail.margin_summary.latest_date} / 單位：張` : '單位：張'}
+          alert={hasRestriction}
         />
       </section>
 
@@ -446,51 +390,38 @@ export default async function StockDetailPage({ params }: PageProps) {
           }
         />
         <StatCard
-          title="支撐 / 壓力"
-          value={
-            overview?.support_price !== undefined || overview?.pressure_price !== undefined
-              ? `${fmtNumber(overview.support_price, 2)} / ${fmtNumber(overview.pressure_price, 2)}`
-              : '待補'
-          }
-          hint={meta.in_selected ? (overview?.radar_tag || overview?.technical_tag || '待補') : '搜尋模式不顯示型態評分'}
+          title="近支撐 / 近壓力"
+          value={`${fmtNumber(overview?.near_support, 2)} / ${fmtNumber(overview?.near_pressure, 2)}`}
+          hint={`強支撐 ${fmtNumber(overview?.strong_support, 2)} / 強壓力 ${fmtNumber(overview?.strong_pressure, 2)}`}
         />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-2">
-        <SectionCard title="EPS" extra={<div className="text-sm text-slate-500">近 4 季</div>}>
-          <PlaceholderChart
+        <SectionCard title="EPS" extra={<div className="text-sm text-slate-500">近 8 季</div>}>
+          <LinePointChart
             title="EPS 趨勢圖"
-            subtitle="顯示近一年季度 EPS。"
-            data={buildEpsChartData(epsList)}
+            subtitle="每季一個點，較容易看轉折。"
+            data={buildEpsChartData(detail?.eps_list ?? [])}
             unitLabel="元"
             valueFormatter={(value) => fmtNumber(value, 2)}
             footer={
-              epsList[0]
-                ? `最新一期 ${epsList[0].quarter} / EPS ${fmtNumber(epsList[0].eps, 2)} / 年增 ${fmtPercent(
-                    epsList[0].yoy,
-                    1
-                  )}`
+              detail?.eps_list?.[0]
+                ? `最新一期 ${detail.eps_list[0].quarter} / EPS ${fmtNumber(detail.eps_list[0].eps, 2)} / 年增 ${fmtPercent(detail.eps_list[0].yoy, 1)}`
                 : '目前沒有 EPS 資料'
             }
           />
         </SectionCard>
 
         <SectionCard title="月營收" extra={<div className="text-sm text-slate-500">近 12 個月</div>}>
-          <PlaceholderChart
+          <LinePointChart
             title="月營收趨勢圖"
-            subtitle="顯示近一年月營收，已轉成較精簡數字。"
-            data={buildRevenueChartData(revenues)}
+            subtitle="每月一個點，已轉成較精簡數字。"
+            data={buildRevenueChartData(detail?.revenues ?? [])}
             unitLabel="億"
             valueFormatter={(value) => fmtNumber(value, 1)}
             footer={
-              revenues[0]
-                ? `最新一期 ${revenues[0].date} / 月營收 ${fmtYiWithUnit(
-                    revenues[0].revenue,
-                    1
-                  )} / 月增 ${fmtPercent(revenues[0].revenue_mom, 1)} / 年增 ${fmtPercent(
-                    revenues[0].revenue_yoy,
-                    1
-                  )}`
+              detail?.revenues?.[0]
+                ? `最新一期 ${detail.revenues[0].date} / 月營收 ${fmtYiWithUnit(detail.revenues[0].revenue, 1)} / 月增 ${fmtPercent(detail.revenues[0].revenue_mom, 1)} / 年增 ${fmtPercent(detail.revenues[0].revenue_yoy, 1)}`
                 : '目前沒有月營收資料'
             }
           />
@@ -501,7 +432,14 @@ export default async function StockDetailPage({ params }: PageProps) {
         <SectionCard title="現金股利 / 股票股利">
           <SimpleTable
             headers={['年度', '除息日', '發放日', '現金股利', '股票股利', '殖利率']}
-            rows={buildDividendRows(dividends)}
+            rows={(detail?.dividends ?? []).slice(0, 8).map((item: DividendItem) => [
+              item.year,
+              fmtDate(item.ex_dividend_date),
+              fmtDate(item.payment_date),
+              item.cash_dividend !== undefined ? fmtNumber(item.cash_dividend, 2) : '待補',
+              item.stock_dividend !== undefined ? fmtNumber(item.stock_dividend, 2) : '待補',
+              item.dividend_yield !== undefined ? fmtPercent(item.dividend_yield, 2) : '待補',
+            ])}
           />
         </SectionCard>
 
@@ -510,19 +448,18 @@ export default async function StockDetailPage({ params }: PageProps) {
             headers={['項目', '數值']}
             rows={[
               ['產業', overview?.industry || '待補'],
-              ['主題', overview?.theme || '待補'],
+              ['主題', overview?.theme || '其他'],
               ['今日榜單狀態', meta.label],
               ['技術標籤', meta.in_selected ? (overview?.technical_tag || '待補') : '未進榜不顯示'],
               ['雷達標籤', meta.in_selected ? (overview?.radar_tag || '待補') : '未進榜不顯示'],
               ['法人分數', meta.in_selected ? (overview?.institution_score !== undefined && overview?.institution_score !== null ? fmtNumber(overview.institution_score, 1) : '待補') : '未進榜不顯示'],
               ['券商分數', meta.in_selected ? (overview?.broker_score !== undefined && overview?.broker_score !== null ? fmtNumber(overview.broker_score, 1) : '待補') : '未進榜不顯示'],
               ['主力分數', meta.in_selected ? (overview?.main_force_score !== undefined && overview?.main_force_score !== null ? fmtNumber(overview.main_force_score, 1) : '待補') : '未進榜不顯示'],
-              ['最終分數', meta.in_selected ? (overview?.final_score !== undefined && overview?.final_score !== null ? fmtNumber(overview.final_score, 1) : '待補') : '未進榜不顯示'],
-              ['外資當日', fmtSigned(institutionalSummary?.foreign?.d1)],
-              ['投信當日', fmtSigned(institutionalSummary?.trust?.d1)],
-              ['自營商當日', fmtSigned(institutionalSummary?.dealer?.d1)],
-              ['融資當日', fmtSigned(marginSummary?.margin?.d1)],
-              ['融券當日', fmtSigned(marginSummary?.short?.d1)],
+              ['近支撐', fmtNumber(overview?.near_support, 2)],
+              ['強支撐', fmtNumber(overview?.strong_support, 2)],
+              ['近壓力', fmtNumber(overview?.near_pressure, 2)],
+              ['強壓力', fmtNumber(overview?.strong_pressure, 2)],
+              ['交易限制', tradeWarning || '無'],
             ]}
           />
         </SectionCard>
@@ -532,14 +469,14 @@ export default async function StockDetailPage({ params }: PageProps) {
         <SectionCard title="法人買賣超變化" extra={<div className="text-sm text-slate-500">單位：張</div>}>
           <SimpleTable
             headers={['法人', '當日', '5日', '10日', '20日']}
-            rows={buildInstitutionalRows(institutionalSummary)}
+            rows={buildInstitutionalRows(detail?.institutional_summary)}
           />
         </SectionCard>
 
         <SectionCard title="融資融券變化" extra={<div className="text-sm text-slate-500">單位：張</div>}>
           <SimpleTable
             headers={['項目', '當日', '5日', '10日', '20日', '目前餘額']}
-            rows={buildMarginRows(marginSummary)}
+            rows={buildMarginRows(detail?.margin_summary)}
           />
         </SectionCard>
       </section>
@@ -548,35 +485,24 @@ export default async function StockDetailPage({ params }: PageProps) {
         <SectionCard title="財報">
           <SimpleTable
             headers={['期間', '營收(億)', '毛利(億)', '營業利益(億)', '淨利(億)', 'EPS']}
-            rows={buildFinancialRows(financials)}
+            rows={(detail?.financials ?? []).slice(0, 8).map((item: FinancialStatementItem) => [
+              item.period,
+              item.revenue !== undefined ? fmtYi(item.revenue, 1) : '待補',
+              item.gross_profit !== undefined ? fmtYi(item.gross_profit, 1) : '待補',
+              item.operating_income !== undefined ? fmtYi(item.operating_income, 1) : '待補',
+              item.net_income !== undefined ? fmtYi(item.net_income, 1) : '待補',
+              item.eps !== undefined ? fmtNumber(item.eps, 2) : '待補',
+            ])}
           />
         </SectionCard>
 
         <SectionCard title="新聞">
           <SimpleTable
             headers={['時間', '來源', '標題']}
-            rows={buildNewsRows(news)}
-          />
-        </SectionCard>
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-2">
-        <SectionCard title="月營收明細">
-          <SimpleTable
-            headers={['日期', '營收(億)', '月增', '年增']}
-            rows={buildRevenueRows(revenues)}
-          />
-        </SectionCard>
-
-        <SectionCard title="券商分點摘要">
-          <SimpleTable
-            headers={['券商', '分點', '買進', '賣出', '淨額']}
-            rows={brokerBranches.slice(0, 10).map((item) => [
-              item.broker_name,
-              item.branch_name || '待補',
-              item.buy !== undefined ? fmtCount(item.buy) : '待補',
-              item.sell !== undefined ? fmtCount(item.sell) : '待補',
-              item.net !== undefined ? fmtSigned(item.net, 0) : '待補',
+            rows={(detail?.news ?? []).slice(0, 10).map((item: NewsItem) => [
+              item.published_at || '待補',
+              item.source || '待補',
+              item.title,
             ])}
           />
         </SectionCard>
