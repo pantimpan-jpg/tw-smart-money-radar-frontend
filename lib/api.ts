@@ -35,6 +35,12 @@ export type StockRow = {
   pct_5d?: number
   pct_20d?: number
   change_pct?: number
+  near_support?: number | null
+  strong_support?: number | null
+  near_resistance?: number | null
+  strong_resistance?: number | null
+  trade_warning?: string | null
+  is_restricted?: boolean
 }
 
 export type ScanPayload = {
@@ -109,8 +115,12 @@ export type StockOverview = {
   final_score?: number | null
   technical_tag?: string | null
   radar_tag?: string | null
-  support_price?: number | null
-  pressure_price?: number | null
+  near_support?: number | null
+  strong_support?: number | null
+  near_pressure?: number | null
+  strong_pressure?: number | null
+  trade_warning?: string | null
+  is_restricted?: boolean
 }
 
 export type RevenueItem = {
@@ -207,6 +217,7 @@ export type SearchStockItem = {
   in_selected: boolean
   radar_tag?: string | null
   score_total?: number | null
+  trade_warning?: string | null
 }
 
 export async function getStockDetail(
