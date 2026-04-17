@@ -1,17 +1,65 @@
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+  (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '')
 
-async function fetcher<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    cache: 'no-store',
-    ...init,
-  })
+const STOCK_DETAIL_CACHE_TTL_MS = 5 * 60 * 1000
+
+type FetcherOptions = RequestInit & {
+  next?: NextFetchRequestConfig
+}
+
+async function fetcher<T>(path: string, init?: FetcherOptions): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, init)
 
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`)
   }
 
   return response.json()
+}
+
+function getStockDetailCacheKey(stockId: string) {
+  return `stock-detail-cache:${stockId}`
+}
+
+function readStockDetailCache(stockId: string): StockDetailResponse | null {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.sessionStorage.getItem(getStockDetailCacheKey(stockId))
+    if (!raw) return null
+
+    const parsed = JSON.parse(raw) as {
+      savedAt: number
+      data: StockDetailResponse
+    }
+
+    if (!parsed?.savedAt || !parsed?.data) return null
+
+    if (Date.now() - parsed.savedAt > STOCK_DETAIL_CACHE_TTL_MS) {
+      window.sessionStorage.removeItem(getStockDetailCacheKey(stockId))
+      return null
+    }
+
+    return parsed.data
+  } catch {
+    return null
+  }
+}
+
+function writeStockDetailCache(stockId: string, data: StockDetailResponse) {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.sessionStorage.setItem(
+      getStockDetailCacheKey(stockId),
+      JSON.stringify({
+        savedAt: Date.now(),
+        data,
+      })
+    )
+  } catch {
+    // ignore cache write failure
+  }
 }
 
 export type StockRow = {
@@ -68,7 +116,9 @@ export type LatestScanResponse = {
 
 export async function getLatestScan(): Promise<LatestScanResponse | null> {
   try {
-    return await fetcher<LatestScanResponse>('/api/scan/latest')
+    return await fetcher<LatestScanResponse>('/api/scan/latest', {
+      cache: 'no-store',
+    })
   } catch {
     return null
   }
@@ -77,6 +127,7 @@ export async function getLatestScan(): Promise<LatestScanResponse | null> {
 export async function runScan() {
   return fetcher('/api/scan/run', {
     method: 'POST',
+    cache: 'no-store',
   })
 }
 
@@ -224,7 +275,33 @@ export async function getStockDetail(
   stockId: string
 ): Promise<StockDetailResponse | null> {
   try {
-    return await fetcher<StockDetailResponse>(`/api/stocks/${stockId}`)
+    return await fetcher<StockDetailResponse>(`/api/stocks/${stockId}`, {
+      next: { revalidate: 300 },
+    })
+  } catch {
+    return null
+  }
+}
+
+export async function getStockDetailClient(
+  stockId: string,
+  options?: {
+    forceRefresh?: boolean
+  }
+): Promise<StockDetailResponse | null> {
+  const forceRefresh = options?.forceRefresh ?? false
+
+  if (!forceRefresh) {
+    const cached = readStockDetailCache(stockId)
+    if (cached) return cached
+  }
+
+  try {
+    const data = await fetcher<StockDetailResponse>(`/api/stocks/${stockId}`, {
+      cache: 'no-store',
+    })
+    writeStockDetailCache(stockId, data)
+    return data
   } catch {
     return null
   }
@@ -238,7 +315,9 @@ export async function searchStocks(
     const params = new URLSearchParams()
     if (q) params.set('q', q)
     params.set('limit', String(limit))
-    return await fetcher<SearchStockItem[]>(`/api/stocks?${params.toString()}`)
+    return await fetcher<SearchStockItem[]>(`/api/stocks?${params.toString()}`, {
+      cache: 'no-store',
+    })
   } catch {
     return []
   }
