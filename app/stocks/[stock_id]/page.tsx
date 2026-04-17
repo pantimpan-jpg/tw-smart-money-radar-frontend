@@ -1,6 +1,11 @@
+'use client'
+
 import Link from 'next/link'
+import { useParams } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import {
-  getStockDetail,
+  getStockDetailClient,
   type DividendItem,
   type EpsItem,
   type FinancialStatementItem,
@@ -10,12 +15,6 @@ import {
   type RevenueItem,
   type StockDetailResponse,
 } from '@/lib/api'
-
-type PageProps = {
-  params: {
-    stock_id: string
-  }
-}
 
 function fmtNumber(value?: number | null, digits = 2) {
   if (value === null || value === undefined || Number.isNaN(value)) return '待補'
@@ -85,14 +84,24 @@ function StatCard({
   )
 }
 
+function StatCardSkeleton() {
+  return (
+    <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
+      <div className="h-4 w-24 animate-pulse rounded bg-slate-200" />
+      <div className="mt-3 h-8 w-28 animate-pulse rounded bg-slate-200" />
+      <div className="mt-3 h-4 w-32 animate-pulse rounded bg-slate-100" />
+    </div>
+  )
+}
+
 function SectionCard({
   title,
   extra,
   children,
 }: {
   title: string
-  extra?: React.ReactNode
-  children: React.ReactNode
+  extra?: ReactNode
+  children: ReactNode
 }) {
   return (
     <section className="rounded-3xl bg-white shadow-sm ring-1 ring-slate-100">
@@ -101,6 +110,19 @@ function SectionCard({
         {extra}
       </div>
       <div className="p-6">{children}</div>
+    </section>
+  )
+}
+
+function SectionSkeleton({ title }: { title: string }) {
+  return (
+    <section className="rounded-3xl bg-white shadow-sm ring-1 ring-slate-100">
+      <div className="border-b border-slate-100 px-6 py-4">
+        <h2 className="text-lg font-bold text-slate-900">{title}</h2>
+      </div>
+      <div className="p-6">
+        <div className="h-64 animate-pulse rounded-2xl bg-slate-100" />
+      </div>
     </section>
   )
 }
@@ -263,24 +285,61 @@ function buildMarginRows(summary?: MarginSummary | null) {
   ]
 }
 
-export default async function StockDetailPage({ params }: PageProps) {
-  const stockId = params.stock_id
-  const detail: StockDetailResponse | null = await getStockDetail(stockId)
+export default function StockDetailPage() {
+  const params = useParams<{ stock_id: string }>()
+  const stockId = String(params?.stock_id || '')
 
-  if (!detail) {
-    return (
-      <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-100">
-          <div className="text-xl font-bold text-slate-900">找不到這檔股票資料</div>
-        </div>
-      </main>
-    )
+  const [detail, setDetail] = useState<StockDetailResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
+
+  useEffect(() => {
+    let active = true
+
+    async function loadInitial() {
+      setLoading(true)
+      setLoadFailed(false)
+
+      const data = await getStockDetailClient(stockId)
+      if (!active) return
+
+      setDetail(data)
+      setLoadFailed(!data)
+      setLoading(false)
+    }
+
+    if (stockId) {
+      loadInitial()
+    }
+
+    return () => {
+      active = false
+    }
+  }, [stockId])
+
+  async function handleRefresh() {
+    setRefreshing(true)
+    const data = await getStockDetailClient(stockId, { forceRefresh: true })
+    setDetail(data)
+    setLoadFailed(!data)
+    setRefreshing(false)
   }
 
-  const { meta, overview } = detail
-  const stockName = overview?.stock_name || stockId
-  const tradeWarning = overview?.trade_warning || ''
+  const stockName = detail?.overview?.stock_name || stockId
+  const tradeWarning = detail?.overview?.trade_warning || ''
   const hasRestriction = Boolean(tradeWarning)
+  const meta = detail?.meta
+  const overview = detail?.overview
+
+  const revenueChartData = useMemo(
+    () => buildRevenueChartData(detail?.revenues ?? []),
+    [detail]
+  )
+  const epsChartData = useMemo(
+    () => buildEpsChartData(detail?.eps_list ?? []),
+    [detail]
+  )
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
@@ -291,15 +350,23 @@ export default async function StockDetailPage({ params }: PageProps) {
               {stockId} {stockName}
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-              搜尋股票與榜單股票共用同一頁面。{meta.in_selected ? '這檔有進今日榜單。' : '這檔未進今日榜單，但資料仍完整顯示。'}
+              {loading
+                ? '頁面已先載入，個股資料正在背景讀取中。'
+                : `搜尋股票與榜單股票共用同一頁面。${meta?.in_selected ? '這檔有進今日榜單。' : '這檔未進今日榜單，但資料仍完整顯示。'}`}
             </p>
           </div>
 
           <div className="rounded-3xl bg-white/10 p-4 ring-1 ring-white/10">
             <div className="text-sm text-slate-300">資料狀態</div>
-            <div className="mt-2 text-lg font-semibold text-white">{meta.label}</div>
+            <div className="mt-2 text-lg font-semibold text-white">
+              {loading ? '讀取中' : meta?.label || '待補'}
+            </div>
             <div className="mt-1 text-sm text-slate-300">
-              {meta.in_selected ? '有模型標籤與分數。' : '沒有模型分數，但個股資料照常顯示。'}
+              {loading
+                ? '先顯示頁面，再背景抓資料。'
+                : meta?.in_selected
+                  ? '有模型標籤與分數。'
+                  : '沒有模型分數，但個股資料照常顯示。'}
             </div>
           </div>
         </div>
@@ -323,183 +390,246 @@ export default async function StockDetailPage({ params }: PageProps) {
           >
             搜尋股票
           </Link>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing || loading}
+            className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {refreshing ? '重新整理中…' : '重新整理資料'}
+          </button>
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          title="最新收盤價"
-          value={overview?.close !== undefined ? fmtNumber(overview.close, 2) : '待補'}
-          hint={overview?.change_pct !== undefined ? `漲跌幅 ${fmtPercent(overview.change_pct, 2)}` : '待補'}
-        />
-        <StatCard
-          title="外資當日買賣超"
-          value={fmtSigned(detail?.institutional_summary?.foreign?.d1)}
-          hint={detail?.institutional_summary?.latest_date ? `${detail.institutional_summary.latest_date} / 單位：張` : '單位：張'}
-        />
-        <StatCard
-          title="投信當日買賣超"
-          value={fmtSigned(detail?.institutional_summary?.trust?.d1)}
-          hint={detail?.institutional_summary?.latest_date ? `${detail.institutional_summary.latest_date} / 單位：張` : '單位：張'}
-        />
-        <StatCard
-          title="融資 / 融券當日變化"
-          value={`${fmtSigned(detail?.margin_summary?.margin?.d1)} / ${fmtSigned(detail?.margin_summary?.short?.d1)}`}
-          hint={detail?.margin_summary?.latest_date ? `${detail.margin_summary.latest_date} / 單位：張` : '單位：張'}
-          alert={hasRestriction}
-        />
-      </section>
+      {loadFailed && !loading ? (
+        <section className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-100">
+          <div className="text-xl font-bold text-slate-900">找不到這檔股票資料</div>
+          <p className="mt-2 text-slate-600">後端目前沒有回傳成功資料，請稍後重試。</p>
+        </section>
+      ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          title="成交值"
-          value={fmtMoney100m(overview?.turnover_100m)}
-          hint={overview?.volume !== undefined ? `成交量 ${fmtCount(overview.volume)}` : '待補'}
-        />
-        <StatCard
-          title="殖利率 / 本益比"
-          value={
-            overview?.dividend_yield !== undefined
-              ? `${fmtPercent(overview.dividend_yield, 2)} / ${fmtNumber(overview.pe_ratio, 2)}`
-              : '待補'
-          }
-          hint={overview?.pb_ratio !== undefined ? `PBR ${fmtNumber(overview.pb_ratio, 2)}` : '待補'}
-        />
-        <StatCard
-          title={meta.in_selected ? '籌碼 / 主力分數' : '今日榜單狀態'}
-          value={
-            meta.in_selected
-              ? overview?.main_force_score !== undefined && overview?.main_force_score !== null
-                ? fmtNumber(overview.main_force_score, 1)
-                : '待補'
-              : meta.label
-          }
-          hint={
-            meta.in_selected
-              ? overview?.broker_score !== undefined && overview?.broker_score !== null
-                ? `券商分數 ${fmtNumber(overview.broker_score, 1)}`
-                : '待補'
-              : '這檔未進今日榜單'
-          }
-        />
-        <StatCard
-          title="近支撐 / 近壓力"
-          value={`${fmtNumber(overview?.near_support, 2)} / ${fmtNumber(overview?.near_pressure, 2)}`}
-          hint={`強支撐 ${fmtNumber(overview?.strong_support, 2)} / 強壓力 ${fmtNumber(overview?.strong_pressure, 2)}`}
-        />
+        {loading ? (
+          <>
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </>
+        ) : (
+          <>
+            <StatCard
+              title="最新收盤價"
+              value={overview?.close !== undefined ? fmtNumber(overview.close, 2) : '待補'}
+              hint={overview?.change_pct !== undefined ? `漲跌幅 ${fmtPercent(overview.change_pct, 2)}` : '待補'}
+            />
+            <StatCard
+              title="外資當日買賣超"
+              value={fmtSigned(detail?.institutional_summary?.foreign?.d1)}
+              hint={detail?.institutional_summary?.latest_date ? `${detail.institutional_summary.latest_date} / 單位：張` : '單位：張'}
+            />
+            <StatCard
+              title="投信當日買賣超"
+              value={fmtSigned(detail?.institutional_summary?.trust?.d1)}
+              hint={detail?.institutional_summary?.latest_date ? `${detail.institutional_summary.latest_date} / 單位：張` : '單位：張'}
+            />
+            <StatCard
+              title="融資 / 融券當日變化"
+              value={`${fmtSigned(detail?.margin_summary?.margin?.d1)} / ${fmtSigned(detail?.margin_summary?.short?.d1)}`}
+              hint={detail?.margin_summary?.latest_date ? `${detail.margin_summary.latest_date} / 單位：張` : '單位：張'}
+              alert={hasRestriction}
+            />
+          </>
+        )}
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-2">
-        <SectionCard title="EPS" extra={<div className="text-sm text-slate-500">近 8 季</div>}>
-          <LinePointChart
-            title="EPS 趨勢圖"
-            subtitle="每季一個點，較容易看轉折。"
-            data={buildEpsChartData(detail?.eps_list ?? [])}
-            unitLabel="元"
-            valueFormatter={(value) => fmtNumber(value, 2)}
-            footer={
-              detail?.eps_list?.[0]
-                ? `最新一期 ${detail.eps_list[0].quarter} / EPS ${fmtNumber(detail.eps_list[0].eps, 2)} / 年增 ${fmtPercent(detail.eps_list[0].yoy, 1)}`
-                : '目前沒有 EPS 資料'
-            }
-          />
-        </SectionCard>
-
-        <SectionCard title="月營收" extra={<div className="text-sm text-slate-500">近 12 個月</div>}>
-          <LinePointChart
-            title="月營收趨勢圖"
-            subtitle="每月一個點，已轉成較精簡數字。"
-            data={buildRevenueChartData(detail?.revenues ?? [])}
-            unitLabel="億"
-            valueFormatter={(value) => fmtNumber(value, 1)}
-            footer={
-              detail?.revenues?.[0]
-                ? `最新一期 ${detail.revenues[0].date} / 月營收 ${fmtYiWithUnit(detail.revenues[0].revenue, 1)} / 月增 ${fmtPercent(detail.revenues[0].revenue_mom, 1)} / 年增 ${fmtPercent(detail.revenues[0].revenue_yoy, 1)}`
-                : '目前沒有月營收資料'
-            }
-          />
-        </SectionCard>
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {loading ? (
+          <>
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </>
+        ) : (
+          <>
+            <StatCard
+              title="成交值"
+              value={fmtMoney100m(overview?.turnover_100m)}
+              hint={overview?.volume !== undefined ? `成交量 ${fmtCount(overview.volume)}` : '待補'}
+            />
+            <StatCard
+              title="殖利率 / 本益比"
+              value={
+                overview?.dividend_yield !== undefined
+                  ? `${fmtPercent(overview.dividend_yield, 2)} / ${fmtNumber(overview.pe_ratio, 2)}`
+                  : '待補'
+              }
+              hint={overview?.pb_ratio !== undefined ? `PBR ${fmtNumber(overview.pb_ratio, 2)}` : '待補'}
+            />
+            <StatCard
+              title={meta?.in_selected ? '籌碼 / 主力分數' : '今日榜單狀態'}
+              value={
+                meta?.in_selected
+                  ? overview?.main_force_score !== undefined && overview?.main_force_score !== null
+                    ? fmtNumber(overview.main_force_score, 1)
+                    : '待補'
+                  : meta?.label || '待補'
+              }
+              hint={
+                meta?.in_selected
+                  ? overview?.broker_score !== undefined && overview?.broker_score !== null
+                    ? `券商分數 ${fmtNumber(overview.broker_score, 1)}`
+                    : '待補'
+                  : '這檔未進今日榜單'
+              }
+            />
+            <StatCard
+              title="近支撐 / 近壓力"
+              value={`${fmtNumber(overview?.near_support, 2)} / ${fmtNumber(overview?.near_pressure, 2)}`}
+              hint={`強支撐 ${fmtNumber(overview?.strong_support, 2)} / 強壓力 ${fmtNumber(overview?.strong_pressure, 2)}`}
+            />
+          </>
+        )}
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-2">
-        <SectionCard title="現金股利 / 股票股利">
-          <SimpleTable
-            headers={['年度', '除息日', '發放日', '現金股利', '股票股利', '殖利率']}
-            rows={(detail?.dividends ?? []).slice(0, 8).map((item: DividendItem) => [
-              item.year,
-              fmtDate(item.ex_dividend_date),
-              fmtDate(item.payment_date),
-              item.cash_dividend !== undefined ? fmtNumber(item.cash_dividend, 2) : '待補',
-              item.stock_dividend !== undefined ? fmtNumber(item.stock_dividend, 2) : '待補',
-              item.dividend_yield !== undefined ? fmtPercent(item.dividend_yield, 2) : '待補',
-            ])}
-          />
-        </SectionCard>
+      {loading ? (
+        <>
+          <section className="grid gap-6 xl:grid-cols-2">
+            <SectionSkeleton title="EPS" />
+            <SectionSkeleton title="月營收" />
+          </section>
 
-        <SectionCard title="籌碼 / 技術摘要">
-          <SimpleTable
-            headers={['項目', '數值']}
-            rows={[
-              ['產業', overview?.industry || '待補'],
-              ['主題', overview?.theme || '其他'],
-              ['今日榜單狀態', meta.label],
-              ['技術標籤', meta.in_selected ? (overview?.technical_tag || '待補') : '未進榜不顯示'],
-              ['雷達標籤', meta.in_selected ? (overview?.radar_tag || '待補') : '未進榜不顯示'],
-              ['法人分數', meta.in_selected ? (overview?.institution_score !== undefined && overview?.institution_score !== null ? fmtNumber(overview.institution_score, 1) : '待補') : '未進榜不顯示'],
-              ['券商分數', meta.in_selected ? (overview?.broker_score !== undefined && overview?.broker_score !== null ? fmtNumber(overview.broker_score, 1) : '待補') : '未進榜不顯示'],
-              ['主力分數', meta.in_selected ? (overview?.main_force_score !== undefined && overview?.main_force_score !== null ? fmtNumber(overview.main_force_score, 1) : '待補') : '未進榜不顯示'],
-              ['近支撐', fmtNumber(overview?.near_support, 2)],
-              ['強支撐', fmtNumber(overview?.strong_support, 2)],
-              ['近壓力', fmtNumber(overview?.near_pressure, 2)],
-              ['強壓力', fmtNumber(overview?.strong_pressure, 2)],
-              ['交易限制', tradeWarning || '無'],
-            ]}
-          />
-        </SectionCard>
-      </section>
+          <section className="grid gap-6 xl:grid-cols-2">
+            <SectionSkeleton title="現金股利 / 股票股利" />
+            <SectionSkeleton title="籌碼 / 技術摘要" />
+          </section>
 
-      <section className="grid gap-6 xl:grid-cols-2">
-        <SectionCard title="法人買賣超變化" extra={<div className="text-sm text-slate-500">單位：張</div>}>
-          <SimpleTable
-            headers={['法人', '當日', '5日', '10日', '20日']}
-            rows={buildInstitutionalRows(detail?.institutional_summary)}
-          />
-        </SectionCard>
+          <section className="grid gap-6 xl:grid-cols-2">
+            <SectionSkeleton title="法人買賣超變化" />
+            <SectionSkeleton title="融資融券變化" />
+          </section>
 
-        <SectionCard title="融資融券變化" extra={<div className="text-sm text-slate-500">單位：張</div>}>
-          <SimpleTable
-            headers={['項目', '當日', '5日', '10日', '20日', '目前餘額']}
-            rows={buildMarginRows(detail?.margin_summary)}
-          />
-        </SectionCard>
-      </section>
+          <section className="grid gap-6 xl:grid-cols-2">
+            <SectionSkeleton title="財報" />
+            <SectionSkeleton title="新聞" />
+          </section>
+        </>
+      ) : detail ? (
+        <>
+          <section className="grid gap-6 xl:grid-cols-2">
+            <SectionCard title="EPS" extra={<div className="text-sm text-slate-500">近 8 季</div>}>
+              <LinePointChart
+                title="EPS 趨勢圖"
+                subtitle="每季一個點，較容易看轉折。"
+                data={epsChartData}
+                unitLabel="元"
+                valueFormatter={(value) => fmtNumber(value, 2)}
+                footer={
+                  detail?.eps_list?.[0]
+                    ? `最新一期 ${detail.eps_list[0].quarter} / EPS ${fmtNumber(detail.eps_list[0].eps, 2)} / 年增 ${fmtPercent(detail.eps_list[0].yoy, 1)}`
+                    : '目前沒有 EPS 資料'
+                }
+              />
+            </SectionCard>
 
-      <section className="grid gap-6 xl:grid-cols-2">
-        <SectionCard title="財報">
-          <SimpleTable
-            headers={['期間', '營收(億)', '毛利(億)', '營業利益(億)', '淨利(億)', 'EPS']}
-            rows={(detail?.financials ?? []).slice(0, 8).map((item: FinancialStatementItem) => [
-              item.period,
-              item.revenue !== undefined ? fmtYi(item.revenue, 1) : '待補',
-              item.gross_profit !== undefined ? fmtYi(item.gross_profit, 1) : '待補',
-              item.operating_income !== undefined ? fmtYi(item.operating_income, 1) : '待補',
-              item.net_income !== undefined ? fmtYi(item.net_income, 1) : '待補',
-              item.eps !== undefined ? fmtNumber(item.eps, 2) : '待補',
-            ])}
-          />
-        </SectionCard>
+            <SectionCard title="月營收" extra={<div className="text-sm text-slate-500">近 12 個月</div>}>
+              <LinePointChart
+                title="月營收趨勢圖"
+                subtitle="每月一個點，已轉成較精簡數字。"
+                data={revenueChartData}
+                unitLabel="億"
+                valueFormatter={(value) => fmtNumber(value, 1)}
+                footer={
+                  detail?.revenues?.[0]
+                    ? `最新一期 ${detail.revenues[0].date} / 月營收 ${fmtYiWithUnit(detail.revenues[0].revenue, 1)} / 月增 ${fmtPercent(detail.revenues[0].revenue_mom, 1)} / 年增 ${fmtPercent(detail.revenues[0].revenue_yoy, 1)}`
+                    : '目前沒有月營收資料'
+                }
+              />
+            </SectionCard>
+          </section>
 
-        <SectionCard title="新聞">
-          <SimpleTable
-            headers={['時間', '來源', '標題']}
-            rows={(detail?.news ?? []).slice(0, 10).map((item: NewsItem) => [
-              item.published_at || '待補',
-              item.source || '待補',
-              item.title,
-            ])}
-          />
-        </SectionCard>
-      </section>
+          <section className="grid gap-6 xl:grid-cols-2">
+            <SectionCard title="現金股利 / 股票股利">
+              <SimpleTable
+                headers={['年度', '除息日', '發放日', '現金股利', '股票股利', '殖利率']}
+                rows={(detail?.dividends ?? []).slice(0, 8).map((item: DividendItem) => [
+                  item.year,
+                  fmtDate(item.ex_dividend_date),
+                  fmtDate(item.payment_date),
+                  item.cash_dividend !== undefined ? fmtNumber(item.cash_dividend, 2) : '待補',
+                  item.stock_dividend !== undefined ? fmtNumber(item.stock_dividend, 2) : '待補',
+                  item.dividend_yield !== undefined ? fmtPercent(item.dividend_yield, 2) : '待補',
+                ])}
+              />
+            </SectionCard>
+
+            <SectionCard title="籌碼 / 技術摘要">
+              <SimpleTable
+                headers={['項目', '數值']}
+                rows={[
+                  ['產業', overview?.industry || '待補'],
+                  ['主題', overview?.theme || '其他'],
+                  ['今日榜單狀態', meta?.label || '待補'],
+                  ['技術標籤', meta?.in_selected ? (overview?.technical_tag || '待補') : '未進榜不顯示'],
+                  ['雷達標籤', meta?.in_selected ? (overview?.radar_tag || '待補') : '未進榜不顯示'],
+                  ['法人分數', meta?.in_selected ? (overview?.institution_score !== undefined && overview?.institution_score !== null ? fmtNumber(overview.institution_score, 1) : '待補') : '未進榜不顯示'],
+                  ['券商分數', meta?.in_selected ? (overview?.broker_score !== undefined && overview?.broker_score !== null ? fmtNumber(overview.broker_score, 1) : '待補') : '未進榜不顯示'],
+                  ['主力分數', meta?.in_selected ? (overview?.main_force_score !== undefined && overview?.main_force_score !== null ? fmtNumber(overview.main_force_score, 1) : '待補') : '未進榜不顯示'],
+                  ['近支撐', fmtNumber(overview?.near_support, 2)],
+                  ['強支撐', fmtNumber(overview?.strong_support, 2)],
+                  ['近壓力', fmtNumber(overview?.near_pressure, 2)],
+                  ['強壓力', fmtNumber(overview?.strong_pressure, 2)],
+                  ['交易限制', tradeWarning || '無'],
+                ]}
+              />
+            </SectionCard>
+          </section>
+
+          <section className="grid gap-6 xl:grid-cols-2">
+            <SectionCard title="法人買賣超變化" extra={<div className="text-sm text-slate-500">單位：張</div>}>
+              <SimpleTable
+                headers={['法人', '當日', '5日', '10日', '20日']}
+                rows={buildInstitutionalRows(detail?.institutional_summary)}
+              />
+            </SectionCard>
+
+            <SectionCard title="融資融券變化" extra={<div className="text-sm text-slate-500">單位：張</div>}>
+              <SimpleTable
+                headers={['項目', '當日', '5日', '10日', '20日', '目前餘額']}
+                rows={buildMarginRows(detail?.margin_summary)}
+              />
+            </SectionCard>
+          </section>
+
+          <section className="grid gap-6 xl:grid-cols-2">
+            <SectionCard title="財報">
+              <SimpleTable
+                headers={['期間', '營收(億)', '毛利(億)', '營業利益(億)', '淨利(億)', 'EPS']}
+                rows={(detail?.financials ?? []).slice(0, 8).map((item: FinancialStatementItem) => [
+                  item.period,
+                  item.revenue !== undefined ? fmtYi(item.revenue, 1) : '待補',
+                  item.gross_profit !== undefined ? fmtYi(item.gross_profit, 1) : '待補',
+                  item.operating_income !== undefined ? fmtYi(item.operating_income, 1) : '待補',
+                  item.net_income !== undefined ? fmtYi(item.net_income, 1) : '待補',
+                  item.eps !== undefined ? fmtNumber(item.eps, 2) : '待補',
+                ])}
+              />
+            </SectionCard>
+
+            <SectionCard title="新聞">
+              <SimpleTable
+                headers={['時間', '來源', '標題']}
+                rows={(detail?.news ?? []).slice(0, 10).map((item: NewsItem) => [
+                  item.published_at || '待補',
+                  item.source || '待補',
+                  item.title,
+                ])}
+              />
+            </SectionCard>
+          </section>
+        </>
+      ) : null}
     </main>
   )
 }
