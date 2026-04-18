@@ -411,24 +411,30 @@ function SimpleTable({
   )
 }
 
-function buildRevenueChartData(revenues: RevenueItem[]) {
+function buildRevenueChartData(
+  revenues: RevenueItem[],
+): Array<{ label: string; value: number | null }> {
   return revenues
     .slice(0, 12)
     .reverse()
     .map((item) => ({
-      label: item.date,
-      value: toYi(item.revenue),
+      label: item.date ?? '',
+      value: item.revenue !== null && item.revenue !== undefined ? toYi(item.revenue) : null,
     }))
+    .filter((item) => item.label !== '')
 }
 
-function buildEpsChartData(epsList: EpsItem[]) {
+function buildEpsChartData(
+  epsList: EpsItem[],
+): Array<{ label: string; value: number | null }> {
   return epsList
     .slice(0, 8)
     .reverse()
     .map((item) => ({
-      label: item.quarter,
-      value: item.eps,
+      label: item.quarter ?? '',
+      value: item.eps ?? null,
     }))
+    .filter((item) => item.label !== '')
 }
 
 function buildInstitutionalRows(summary?: InstitutionalSummary | null) {
