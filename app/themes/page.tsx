@@ -76,6 +76,11 @@ function fmtPrice(value?: number | null) {
   return Number(value).toFixed(2)
 }
 
+function fmtTurnover(value?: number | null) {
+  if (value === null || value === undefined || Number.isNaN(value)) return '待補'
+  return `${Number(value).toFixed(1)}億`
+}
+
 function pickTheme(row: StockRow) {
   const theme = (row.theme || '').trim()
   const group = (row.group || '').trim()
@@ -101,19 +106,26 @@ export default async function ThemesPage() {
   const groups = Array.from(grouped.entries())
     .map(([label, items]) => [
       label,
-      [...items].sort(
-        (a, b) => Number(b.score_total ?? b.score ?? 0) - Number(a.score_total ?? a.score ?? 0)
-      ),
+      [...items].sort((a, b) => {
+        const scoreDiff =
+          Number(b.score_total ?? b.score ?? 0) - Number(a.score_total ?? a.score ?? 0)
+        if (scoreDiff !== 0) return scoreDiff
+
+        return Number(b.turnover_100m ?? 0) - Number(a.turnover_100m ?? 0)
+      }),
     ] as const)
     .sort((a, b) => {
+      // 先按檔數多寡排，讓熱門族群在最前面
+      if (b[1].length !== a[1].length) return b[1].length - a[1].length
+
+      // 同檔數再按題材優先順序
       const ai = THEME_ORDER.indexOf(a[0])
       const bi = THEME_ORDER.indexOf(b[0])
-
       const orderA = ai === -1 ? 999 : ai
       const orderB = bi === -1 ? 999 : bi
-
       if (orderA !== orderB) return orderA - orderB
-      return b[1].length - a[1].length
+
+      return a[0].localeCompare(b[0], 'zh-Hant')
     })
 
   return (
@@ -121,7 +133,7 @@ export default async function ThemesPage() {
       <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
         <h1 className="text-2xl font-bold text-slate-900">題材分類</h1>
         <p className="mt-1 text-sm text-slate-600">
-          先用細題材 mapping 分組；若沒有細題材，再退回產業別。
+          依掃描檔數由多到少排列族群。若有細題材，優先顯示細題材；沒有才退回產業別。
         </p>
       </section>
 
@@ -136,8 +148,8 @@ export default async function ThemesPage() {
                 </span>
               </div>
 
-              <div className="space-y-1.5">
-                {items.slice(0, 10).map((row) => (
+              <div className="max-h-[560px] space-y-1.5 overflow-y-auto pr-1">
+                {items.map((row) => (
                   <Link
                     key={`${label}-${row.stock_id}`}
                     href={`/stocks/${row.stock_id}`}
@@ -150,7 +162,11 @@ export default async function ThemesPage() {
                       <div className="mt-0.5 text-[11px] text-slate-500">
                         {row.radar_tag || row.tag || '未標記'}
                       </div>
+                      <div className="mt-0.5 text-[11px] text-slate-400">
+                        {fmtTurnover(row.turnover_100m)}
+                      </div>
                     </div>
+
                     <div className="shrink-0 text-xs font-semibold text-slate-800">
                       {fmtPrice(row.close)}
                     </div>
