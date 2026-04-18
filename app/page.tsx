@@ -70,10 +70,7 @@ async function fetchBackendJson<T>(path: string): Promise<T | null> {
       next: { revalidate: 0 },
     })
 
-    if (!res.ok) {
-      return null
-    }
-
+    if (!res.ok) return null
     return (await res.json()) as T
   } catch {
     return null
@@ -143,10 +140,10 @@ function SummaryCard({
   hint: string
 }) {
   return (
-    <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
-      <div className="text-sm text-slate-500">{title}</div>
-      <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">{value}</div>
-      <div className="mt-1 text-sm text-slate-600">{hint}</div>
+    <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+      <div className="text-xs text-slate-500">{title}</div>
+      <div className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{value}</div>
+      <div className="mt-1 text-xs leading-5 text-slate-600">{hint}</div>
     </div>
   )
 }
@@ -154,7 +151,7 @@ function SummaryCard({
 function RestrictionBadge({ text }: { text?: string | null }) {
   if (!text) return null
   return (
-    <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">
+    <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">
       {text}
     </span>
   )
@@ -170,32 +167,32 @@ function StockSection({
   rows: StockRow[]
 }) {
   return (
-    <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
-      <div className="mb-4">
-        <h2 className="text-xl font-bold text-slate-900">{title}</h2>
-        <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+    <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+      <div className="mb-3">
+        <h2 className="text-lg font-bold text-slate-900">{title}</h2>
+        <p className="mt-1 text-xs leading-5 text-slate-500">{subtitle}</p>
       </div>
 
       {rows.length ? (
-        <div className="overflow-x-auto rounded-2xl ring-1 ring-slate-100">
+        <div className="overflow-x-auto rounded-xl ring-1 ring-slate-100">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">股號</th>
-                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">名稱</th>
-                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">主題</th>
-                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">現價</th>
-                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">成交值</th>
-                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">分數</th>
-                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">標籤</th>
-                <th className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-700">交易限制</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">股號</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">名稱</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">主題</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">現價</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">成交值</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">分數</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">標籤</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">交易限制</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((stock) => (
                 <tr key={stock.stock_id} className="border-t border-slate-100">
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-800">{stock.stock_id}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-900">
+                  <td className="whitespace-nowrap px-3 py-2 text-slate-800">{stock.stock_id}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-slate-900">
                     <Link
                       href={`/stocks/${stock.stock_id}`}
                       className="font-medium underline-offset-4 hover:underline"
@@ -203,18 +200,14 @@ function StockSection({
                       {stock.name || stock.stock_id}
                     </Link>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-800">{stock.theme || '其他'}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-800">{fmtPrice(stock.close)}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-                    {fmtTurnover(stock.turnover_100m)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-800">
-                    {fmtScore(stock.score_total ?? stock.score)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-800">
+                  <td className="whitespace-nowrap px-3 py-2 text-slate-800">{stock.theme || '其他'}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-slate-800">{fmtPrice(stock.close)}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-slate-800">{fmtTurnover(stock.turnover_100m)}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-slate-800">{fmtScore(stock.score_total ?? stock.score)}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-slate-800">
                     {stock.radar_tag || stock.tag || '待補'}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3">
+                  <td className="whitespace-nowrap px-3 py-2">
                     <RestrictionBadge text={stock.trade_warning} />
                   </td>
                 </tr>
@@ -223,7 +216,7 @@ function StockSection({
           </table>
         </div>
       ) : (
-        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6 text-slate-500">
+        <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500">
           目前沒有資料
         </div>
       )}
@@ -240,9 +233,9 @@ function ScanStatusPanel({
 }) {
   if (!status) {
     return (
-      <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
-        <div className="text-xl font-bold text-slate-900">尚未取得掃描狀態</div>
-        <p className="mt-2 text-slate-600">請確認後端 API 與環境變數是否正常。</p>
+      <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+        <div className="text-lg font-bold text-slate-900">尚未取得掃描狀態</div>
+        <p className="mt-2 text-sm text-slate-600">請確認後端 API 與環境變數是否正常。</p>
       </section>
     )
   }
@@ -310,35 +303,35 @@ function ScanStatusPanel({
   }
 
   return (
-    <section className={`rounded-3xl p-6 shadow-sm ring-1 ${tone.card}`}>
+    <section className={`rounded-2xl p-4 shadow-sm ring-1 ${tone.card}`}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <div className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${tone.badge}`}>
+          <div className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${tone.badge}`}>
             {stageLabel}
           </div>
-          <h2 className={`mt-3 text-2xl font-bold ${tone.title}`}>{title}</h2>
-          <p className={`mt-2 ${tone.text}`}>{description}</p>
+          <h2 className={`mt-2 text-xl font-bold ${tone.title}`}>{title}</h2>
+          <p className={`mt-2 text-sm ${tone.text}`}>{description}</p>
 
-          <div className={`mt-4 text-sm ${tone.text}`}>
+          <div className={`mt-3 text-sm ${tone.text}`}>
             進度：{processed} / {total}　成功：{success}　失敗：{failed}　略過：{skipped}
           </div>
 
           {stage === 'empty' && lastSuccessfulUpdatedAt ? (
-            <div className="mt-2 text-sm text-slate-500">
+            <div className="mt-2 text-xs text-slate-500">
               最近一次有結果的榜單時間：{formatTaipeiTime(lastSuccessfulUpdatedAt)}
             </div>
           ) : null}
         </div>
 
-        <div className="w-full max-w-sm rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-          <div className="text-sm text-slate-500">狀態更新時間</div>
-          <div className="mt-2 text-base font-semibold text-slate-900">
+        <div className="w-full max-w-sm rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
+          <div className="text-xs text-slate-500">狀態更新時間</div>
+          <div className="mt-1 text-base font-semibold text-slate-900">
             {formatTaipeiTime(status.last_updated)}
           </div>
         </div>
       </div>
 
-      <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-slate-100">
+      <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
         <div
           className={`h-full rounded-full transition-all ${tone.bar}`}
           style={{ width: `${percent}%` }}
@@ -357,18 +350,17 @@ export default async function HomePage() {
   const data = raw?.data
   const stage = status?.stage || 'idle'
 
-  const startingBreakout = data?.starting_breakout?.slice(0, 10) ?? []
-  const startingAccum = data?.starting_accum?.slice(0, 10) ?? []
-  const secondWave = data?.second_wave?.slice(0, 10) ?? []
+  const startingAccum = data?.starting_accum?.slice(0, 20) ?? []
+  const secondWave = data?.second_wave?.slice(0, 20) ?? []
   const strongTrend = data?.strong_trend?.slice(0, 10) ?? []
-  const watchlist = data?.watchlist?.slice(0, 10) ?? []
+  const startingBreakout = data?.starting_breakout?.slice(0, 10) ?? []
 
   const headerUpdatedAt = status?.last_updated || raw?.updated_at || null
   const showRanking = Boolean(data) && stage !== 'empty'
 
   return (
-    <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
-      <section className="rounded-[28px] bg-slate-900 px-6 py-7 text-white shadow-sm md:px-8 md:py-8">
+    <main className="mx-auto max-w-7xl space-y-5 px-4 py-5">
+      <section className="rounded-[28px] bg-slate-900 px-6 py-6 text-white shadow-sm md:px-8 md:py-7">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-white/15">
@@ -382,18 +374,18 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <div className="rounded-3xl bg-white/10 p-4 ring-1 ring-white/10">
-            <div className="text-sm text-slate-300">更新時間</div>
+          <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
+            <div className="text-xs text-slate-300">更新時間</div>
             <div className="mt-2 text-lg font-semibold text-white">
               {formatTaipeiTime(headerUpdatedAt)}
             </div>
-            <div className="mt-1 text-sm text-slate-300">
+            <div className="mt-1 text-xs text-slate-300">
               平日台灣時間 17:00 自動掃描
             </div>
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col gap-3 md:flex-row">
+        <div className="mt-5 flex flex-col gap-3 md:flex-row">
           <form action="/stocks" className="flex w-full gap-3">
             <input
               type="text"
@@ -414,7 +406,7 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-3">
+        <div className="mt-3 flex flex-wrap gap-3">
           <Link
             href="/stocks"
             className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/15 transition hover:bg-white/15"
@@ -428,7 +420,7 @@ export default async function HomePage() {
 
       {showRanking ? (
         <>
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
             <SummaryCard
               title="掃描市場檔數"
               value={data?.summary?.market_scanned ?? 0}
@@ -461,7 +453,7 @@ export default async function HomePage() {
             />
           </section>
 
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
+          <section className="grid gap-3 md:grid-cols-2">
             <SummaryCard
               title="強者恆強"
               value={data?.summary?.strong_trend_count ?? 0}
@@ -474,49 +466,43 @@ export default async function HomePage() {
             />
           </section>
 
-          <section className="grid gap-6 xl:grid-cols-2">
-            <StockSection
-              title="剛啟動｜爆量突破"
-              subtitle="偏剛轉強、帶量突破平台，適合抓早期啟動股。"
-              rows={startingBreakout}
-            />
+          <section className="grid gap-4 xl:grid-cols-2">
             <StockSection
               title="剛啟動｜收籌墊高"
               subtitle="偏慢慢墊高、量能溫和轉強，適合抓主力收籌後再發動。"
               rows={startingAccum}
             />
-          </section>
-
-          <section className="grid gap-6 xl:grid-cols-2">
             <StockSection
               title="可能第二波"
               subtitle="偏整理後再攻，重點看強勢整理後的再次轉強。"
               rows={secondWave}
             />
+          </section>
+
+          <section className="grid gap-4 xl:grid-cols-2">
             <StockSection
               title="強者恆強"
               subtitle="偏主升段延續，適合觀察高位整理後續創高型股票。"
               rows={strongTrend}
             />
+            <StockSection
+              title="剛啟動｜爆量突破"
+              subtitle="偏剛轉強、帶量突破平台，適合抓早期啟動股。"
+              rows={startingBreakout}
+            />
           </section>
-
-          <StockSection
-            title="Watchlist"
-            subtitle="先放你要追蹤的名單，方便後續進個股頁深看。"
-            rows={watchlist}
-          />
         </>
       ) : stage === 'empty' ? (
-        <section className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-100">
-          <div className="text-xl font-bold text-slate-900">今天沒有新榜單</div>
-          <p className="mt-2 text-slate-600">
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
+          <div className="text-lg font-bold text-slate-900">今天沒有新榜單</div>
+          <p className="mt-2 text-sm text-slate-600">
             這代表本次掃描有正常跑完，但沒有股票通過第一層快篩，所以不顯示舊榜單來避免誤判。
           </p>
         </section>
       ) : (
-        <section className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-100">
-          <div className="text-xl font-bold text-slate-900">目前還沒有掃描結果</div>
-          <p className="mt-2 text-slate-600">請先等排程掃描完成，或按右上方的立即掃描手動執行。</p>
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
+          <div className="text-lg font-bold text-slate-900">目前還沒有掃描結果</div>
+          <p className="mt-2 text-sm text-slate-600">請先等排程掃描完成，或按右上方的立即掃描手動執行。</p>
         </section>
       )}
     </main>
