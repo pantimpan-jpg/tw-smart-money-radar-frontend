@@ -6,31 +6,17 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   getStockDetailClient,
+  type CompanyProfile,
   type DividendItem,
   type EpsItem,
   type FinancialStatementItem,
   type InstitutionalSummary,
   type MarginSummary,
   type NewsItem,
+  type PriceHistoryPoint,
   type RevenueItem,
   type StockDetailResponse,
 } from '@/lib/api'
-
-type PriceHistoryPoint = {
-  date: string
-  close?: number | null
-}
-
-type CompanyProfile = {
-  stock_id?: string
-  industry?: string | null
-  theme?: string | null
-  industry_role?: string | null
-  one_liner?: string | null
-  positioning?: string | null
-  core_tech?: string[]
-  main_applications?: string[]
-}
 
 function fmtNumber(value?: number | null, digits = 2) {
   if (value === null || value === undefined || Number.isNaN(value)) return '待補'
@@ -82,7 +68,8 @@ function fmtYiWithUnit(value?: number | null, digits = 1) {
 
 function joinList(items?: string[] | null) {
   if (!items || !items.length) return '待補'
-  return items.filter(Boolean).join('、')
+  const filtered = items.filter(Boolean)
+  return filtered.length ? filtered.join('、') : '待補'
 }
 
 function StatCard({
@@ -189,7 +176,10 @@ function HeroInfoCard({
 }
 
 function HeroPriceChart({ data }: { data: PriceHistoryPoint[] }) {
-  const valid = data.filter((item) => item.close !== null && item.close !== undefined && !Number.isNaN(item.close))
+  const valid = data.filter(
+    (item) => item.close !== null && item.close !== undefined && !Number.isNaN(item.close),
+  )
+
   if (!valid.length) {
     return (
       <div className="rounded-3xl bg-white/10 p-5 ring-1 ring-white/10">
@@ -300,7 +290,7 @@ function LinePointChart({
 }: {
   title: string
   subtitle: string
-  data: Array<{ label: string; value?: number | null }>
+  data: Array<{ label: string; value: number | null }>
   unitLabel?: string
   valueFormatter?: (value?: number | null) => string
   footer?: string
@@ -370,7 +360,7 @@ function SimpleTable({
   rows,
 }: {
   headers: string[]
-  rows: Array<Array<string | number>>
+  rows: Array<Array<ReactNode>>
 }) {
   if (!rows.length) {
     return (
@@ -400,7 +390,7 @@ function SimpleTable({
             <tr key={rowIndex} className="border-t border-slate-100">
               {row.map((cell, cellIndex) => (
                 <td key={cellIndex} className="whitespace-nowrap px-4 py-3 text-slate-800">
-                  {cell}
+                  {cell ?? '待補'}
                 </td>
               ))}
             </tr>
@@ -437,7 +427,7 @@ function buildEpsChartData(
     .filter((item) => item.label !== '')
 }
 
-function buildInstitutionalRows(summary?: InstitutionalSummary | null) {
+function buildInstitutionalRows(summary?: InstitutionalSummary | null): Array<Array<ReactNode>> {
   if (!summary) return []
   return [
     ['外資', fmtSigned(summary.foreign?.d1), fmtSigned(summary.foreign?.d5), fmtSigned(summary.foreign?.d10), fmtSigned(summary.foreign?.d20)],
@@ -446,7 +436,7 @@ function buildInstitutionalRows(summary?: InstitutionalSummary | null) {
   ]
 }
 
-function buildMarginRows(summary?: MarginSummary | null) {
+function buildMarginRows(summary?: MarginSummary | null): Array<Array<ReactNode>> {
   if (!summary) return []
   return [
     ['融資', fmtSigned(summary.margin?.d1), fmtSigned(summary.margin?.d5), fmtSigned(summary.margin?.d10), fmtSigned(summary.margin?.d20), summary.margin_balance ?? '待補'],
@@ -501,23 +491,16 @@ export default function StockDetailPage() {
   const meta = detail?.meta
   const overview = detail?.overview
 
-  const companyProfile = useMemo(() => {
-    return (((detail as any)?.company_profile ?? null) as CompanyProfile | null)
-  }, [detail])
-
-  const priceHistory180 = useMemo(() => {
-    const raw = (detail as any)?.price_history_180
-    if (!Array.isArray(raw)) return []
-    return raw as PriceHistoryPoint[]
-  }, [detail])
+  const companyProfile: CompanyProfile | null = detail?.company_profile ?? null
+  const priceHistory180: PriceHistoryPoint[] = detail?.price_history_180 ?? []
 
   const revenueChartData = useMemo(
     () => buildRevenueChartData(detail?.revenues ?? []),
-    [detail]
+    [detail],
   )
   const epsChartData = useMemo(
     () => buildEpsChartData(detail?.eps_list ?? []),
-    [detail]
+    [detail],
   )
 
   return (
@@ -728,8 +711,8 @@ export default function StockDetailPage() {
                 unitLabel="元"
                 valueFormatter={(value) => fmtNumber(value, 2)}
                 footer={
-                  detail?.eps_list?.[0]
-                    ? `最新一期 ${detail.eps_list[0].quarter} / EPS ${fmtNumber(detail.eps_list[0].eps, 2)} / 年增 ${fmtPercent(detail.eps_list[0].yoy, 1)}`
+                  detail.eps_list?.[0]
+                    ? `最新一期 ${detail.eps_list[0].quarter ?? '待補'} / EPS ${fmtNumber(detail.eps_list[0].eps, 2)} / 年增 ${fmtPercent(detail.eps_list[0].yoy, 1)}`
                     : '目前沒有 EPS 資料'
                 }
               />
@@ -743,8 +726,8 @@ export default function StockDetailPage() {
                 unitLabel="億"
                 valueFormatter={(value) => fmtNumber(value, 1)}
                 footer={
-                  detail?.revenues?.[0]
-                    ? `最新一期 ${detail.revenues[0].date} / 月營收 ${fmtYiWithUnit(detail.revenues[0].revenue, 1)} / 月增 ${fmtPercent(detail.revenues[0].revenue_mom, 1)} / 年增 ${fmtPercent(detail.revenues[0].revenue_yoy, 1)}`
+                  detail.revenues?.[0]
+                    ? `最新一期 ${detail.revenues[0].date ?? '待補'} / 月營收 ${fmtYiWithUnit(detail.revenues[0].revenue, 1)} / 月增 ${fmtPercent(detail.revenues[0].revenue_mom, 1)} / 年增 ${fmtPercent(detail.revenues[0].revenue_yoy, 1)}`
                     : '目前沒有月營收資料'
                 }
               />
@@ -755,8 +738,8 @@ export default function StockDetailPage() {
             <SectionCard title="現金股利 / 股票股利">
               <SimpleTable
                 headers={['年度', '除息日', '發放日', '現金股利', '股票股利', '殖利率']}
-                rows={(detail?.dividends ?? []).slice(0, 8).map((item: DividendItem) => [
-                  item.year,
+                rows={(detail.dividends ?? []).slice(0, 8).map((item: DividendItem) => [
+                  item.year ?? '待補',
                   fmtDate(item.ex_dividend_date),
                   fmtDate(item.payment_date),
                   item.cash_dividend !== undefined ? fmtNumber(item.cash_dividend, 2) : '待補',
@@ -796,14 +779,14 @@ export default function StockDetailPage() {
             <SectionCard title="法人買賣超變化" extra={<div className="text-sm text-slate-500">單位：張</div>}>
               <SimpleTable
                 headers={['法人', '當日', '5日', '10日', '20日']}
-                rows={buildInstitutionalRows(detail?.institutional_summary)}
+                rows={buildInstitutionalRows(detail.institutional_summary)}
               />
             </SectionCard>
 
             <SectionCard title="融資融券變化" extra={<div className="text-sm text-slate-500">單位：張</div>}>
               <SimpleTable
                 headers={['項目', '當日', '5日', '10日', '20日', '目前餘額']}
-                rows={buildMarginRows(detail?.margin_summary)}
+                rows={buildMarginRows(detail.margin_summary)}
               />
             </SectionCard>
           </section>
@@ -812,8 +795,8 @@ export default function StockDetailPage() {
             <SectionCard title="財報">
               <SimpleTable
                 headers={['期間', '營收(億)', '毛利(億)', '營業利益(億)', '淨利(億)', 'EPS']}
-                rows={(detail?.financials ?? []).slice(0, 8).map((item: FinancialStatementItem) => [
-                  item.period,
+                rows={(detail.financials ?? []).slice(0, 8).map((item: FinancialStatementItem) => [
+                  item.period ?? '待補',
                   item.revenue !== undefined ? fmtYi(item.revenue, 1) : '待補',
                   item.gross_profit !== undefined ? fmtYi(item.gross_profit, 1) : '待補',
                   item.operating_income !== undefined ? fmtYi(item.operating_income, 1) : '待補',
@@ -826,10 +809,10 @@ export default function StockDetailPage() {
             <SectionCard title="新聞">
               <SimpleTable
                 headers={['時間', '來源', '標題']}
-                rows={(detail?.news ?? []).slice(0, 10).map((item: NewsItem) => [
+                rows={(detail.news ?? []).slice(0, 10).map((item: NewsItem) => [
                   item.published_at || '待補',
                   item.source || '待補',
-                  item.title,
+                  item.title || '待補',
                 ])}
               />
             </SectionCard>
