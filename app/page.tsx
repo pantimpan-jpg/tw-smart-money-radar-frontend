@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import StockTable, { type StockRow } from '@/components/stock-table'
 
@@ -182,7 +183,9 @@ export default function Page() {
               <div className="inline-flex rounded-full bg-white/10 px-3 py-1 text-sm">
                 TW Smart Money Radar
               </div>
+
               <h1 className="mt-4 text-4xl font-black tracking-tight">台股主力掃描首頁</h1>
+
               <p className="mt-3 text-lg text-slate-200">
                 已排除 ETF 與金融股。首頁上方可直接搜尋任意股票，榜單中若有警示沖、先買現沖、處置或注意股，會醒目標示。
               </p>
@@ -194,12 +197,14 @@ export default function Page() {
                   placeholder="搜尋股號、股名、題材，例如：1303 / 南亞 / PCB"
                   className="h-16 w-full rounded-2xl border border-white/10 bg-white/10 px-5 text-lg text-white placeholder:text-slate-300 outline-none"
                 />
+
                 <button
                   type="button"
                   className="h-16 rounded-2xl bg-white px-6 text-lg font-bold text-slate-900"
                 >
                   搜尋
                 </button>
+
                 <button
                   type="button"
                   onClick={startScan}
@@ -210,12 +215,12 @@ export default function Page() {
                 </button>
               </div>
 
-              <button
-                type="button"
+              <Link
+                href="/stocks"
                 className="mt-3 inline-flex rounded-full bg-white/10 px-4 py-2 text-sm font-semibold"
               >
                 進入股票清單
-              </button>
+              </Link>
             </div>
 
             <div className="min-w-[280px] rounded-3xl bg-white/10 p-5">
@@ -232,9 +237,11 @@ export default function Page() {
               <div className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
                 {isRunning ? '抓資料' : '已完成'}
               </div>
+
               <h2 className="mt-3 text-4xl font-black text-slate-900">
                 {isRunning ? '掃描進行中' : '掃描完成'}
               </h2>
+
               <p className="mt-2 text-lg text-slate-600">{status?.message || '掃描完成'}</p>
 
               <div className="mt-4 text-xl text-slate-700">
