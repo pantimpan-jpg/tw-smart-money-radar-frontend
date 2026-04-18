@@ -25,6 +25,30 @@ type LatestScanResponse = {
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '')
 
+const THEME_ORDER = [
+  'CPO/矽光子',
+  'AI伺服器/BMC',
+  'AI伺服器/OEM',
+  '散熱',
+  'BBU/電池備援',
+  '電源/BBU',
+  '低軌衛星',
+  'PCB/CCL',
+  'ABF載板',
+  '記憶體',
+  '面板/觸控',
+  '網通',
+  'MLCC/被動元件',
+  '軍工/航太',
+  '半導體設備/測試',
+  '銅箔/材料',
+  '半導體',
+  '光電',
+  '電子零組件',
+  '其他電子',
+  '其他',
+]
+
 function buildApiUrl(path: string) {
   if (!API_BASE) return ''
   return `${API_BASE}${path}`
@@ -52,7 +76,7 @@ function fmtPrice(value?: number | null) {
   return Number(value).toFixed(2)
 }
 
-function pickGroupLabel(row: StockRow) {
+function pickTheme(row: StockRow) {
   const theme = (row.theme || '').trim()
   const group = (row.group || '').trim()
 
@@ -68,7 +92,7 @@ export default async function ThemesPage() {
   const grouped = new Map<string, StockRow[]>()
 
   for (const row of rows) {
-    const label = pickGroupLabel(row)
+    const label = pickTheme(row)
     const current = grouped.get(label) || []
     current.push(row)
     grouped.set(label, current)
@@ -77,16 +101,27 @@ export default async function ThemesPage() {
   const groups = Array.from(grouped.entries())
     .map(([label, items]) => [
       label,
-      [...items].sort((a, b) => Number(b.score_total ?? b.score ?? 0) - Number(a.score_total ?? a.score ?? 0)),
+      [...items].sort(
+        (a, b) => Number(b.score_total ?? b.score ?? 0) - Number(a.score_total ?? a.score ?? 0)
+      ),
     ] as const)
-    .sort((a, b) => b[1].length - a[1].length)
+    .sort((a, b) => {
+      const ai = THEME_ORDER.indexOf(a[0])
+      const bi = THEME_ORDER.indexOf(b[0])
+
+      const orderA = ai === -1 ? 999 : ai
+      const orderB = bi === -1 ? 999 : bi
+
+      if (orderA !== orderB) return orderA - orderB
+      return b[1].length - a[1].length
+    })
 
   return (
     <main className="mx-auto max-w-7xl space-y-4 px-3 py-4">
-      <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+      <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
         <h1 className="text-2xl font-bold text-slate-900">題材分類</h1>
         <p className="mt-1 text-sm text-slate-600">
-          先用模型題材與產業別做卡片分組。若模型題材是「其他」，就退回產業別顯示。
+          先用細題材 mapping 分組；若沒有細題材，再退回產業別。
         </p>
       </section>
 
