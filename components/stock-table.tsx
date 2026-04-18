@@ -6,20 +6,20 @@ import Link from 'next/link'
 export type StockRow = {
   stock_id: string
   name: string
-  group?: string
-  theme?: string
-  close?: number
-  turnover_100m?: number
-  volume_ratio?: number
-  score?: number
-  score_total?: number
-  tag?: string
-  radar_tag?: string
-  reason_text?: string
-  near_support?: number
-  strong_support?: number
-  near_resistance?: number
-  strong_resistance?: number
+  group?: string | null
+  theme?: string | null
+  close?: number | null
+  turnover_100m?: number | null
+  volume_ratio?: number | null
+  score?: number | null
+  score_total?: number | null
+  tag?: string | null
+  radar_tag?: string | null
+  reason_text?: string | null
+  near_support?: number | null
+  strong_support?: number | null
+  near_resistance?: number | null
+  strong_resistance?: number | null
   [key: string]: unknown
 }
 
