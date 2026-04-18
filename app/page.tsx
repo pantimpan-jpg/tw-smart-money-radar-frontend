@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 import Link from 'next/link'
 import { ScanButton } from '@/components/scan-button'
@@ -72,6 +73,7 @@ async function fetchBackendJson<T>(path: string): Promise<T | null> {
       cache: 'no-store',
       next: { revalidate: 0 },
     })
+
     if (!res.ok) return null
     return (await res.json()) as T
   } catch {
@@ -96,6 +98,7 @@ function fmtScore(value?: number | null) {
 
 function formatTaipeiTime(value?: string | null) {
   if (!value) return '待補'
+
   try {
     return new Intl.DateTimeFormat('zh-TW', {
       timeZone: 'Asia/Taipei',
@@ -162,38 +165,44 @@ function StockSection({
   title,
   subtitle,
   rows,
+  compact = false,
 }: {
   title: string
   subtitle: string
   rows: StockRow[]
+  compact?: boolean
 }) {
   return (
     <section className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-100">
       <div className="mb-2">
         <h2 className="text-base font-bold text-slate-900">{title}</h2>
-        <p className="mt-1 text-[11px] leading-4 text-slate-500">{subtitle}</p>
+        <p className="mt-0.5 text-[11px] leading-4 text-slate-500">{subtitle}</p>
       </div>
 
       {rows.length ? (
-        <div className="overflow-x-auto rounded-lg ring-1 ring-slate-100">
+        <div
+          className={`overflow-auto rounded-lg ring-1 ring-slate-100 ${
+            compact ? 'max-h-[260px]' : 'max-h-[360px]'
+          }`}
+        >
           <table className="min-w-full text-xs">
             <thead className="bg-slate-50">
               <tr>
-                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">股號</th>
-                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">名稱</th>
-                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">主題</th>
-                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">現價</th>
-                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">成交值</th>
-                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">分數</th>
-                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">標籤</th>
-                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">交易限制</th>
+                <th className="whitespace-nowrap px-2 py-2 text-left font-semibold text-slate-700">股號</th>
+                <th className="whitespace-nowrap px-2 py-2 text-left font-semibold text-slate-700">名稱</th>
+                <th className="whitespace-nowrap px-2 py-2 text-left font-semibold text-slate-700">主題</th>
+                <th className="whitespace-nowrap px-2 py-2 text-left font-semibold text-slate-700">現價</th>
+                <th className="whitespace-nowrap px-2 py-2 text-left font-semibold text-slate-700">成交值</th>
+                <th className="whitespace-nowrap px-2 py-2 text-left font-semibold text-slate-700">分數</th>
+                <th className="whitespace-nowrap px-2 py-2 text-left font-semibold text-slate-700">標籤</th>
+                <th className="whitespace-nowrap px-2 py-2 text-left font-semibold text-slate-700">交易限制</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((stock) => (
                 <tr key={stock.stock_id} className="border-t border-slate-100">
-                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-800">{stock.stock_id}</td>
-                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-900">
+                  <td className="whitespace-nowrap px-2 py-2 text-slate-800">{stock.stock_id}</td>
+                  <td className="whitespace-nowrap px-2 py-2 text-slate-900">
                     <Link
                       href={`/stocks/${stock.stock_id}`}
                       className="font-medium underline-offset-4 hover:underline"
@@ -201,18 +210,14 @@ function StockSection({
                       {stock.name || stock.stock_id}
                     </Link>
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-800">
-                    {stock.theme || stock.group || '其他'}
-                  </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-800">{fmtPrice(stock.close)}</td>
-                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-800">{fmtTurnover(stock.turnover_100m)}</td>
-                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-800">
-                    {fmtScore(stock.score_total ?? stock.score)}
-                  </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-800">
+                  <td className="whitespace-nowrap px-2 py-2 text-slate-800">{stock.theme || stock.group || '其他'}</td>
+                  <td className="whitespace-nowrap px-2 py-2 text-slate-800">{fmtPrice(stock.close)}</td>
+                  <td className="whitespace-nowrap px-2 py-2 text-slate-800">{fmtTurnover(stock.turnover_100m)}</td>
+                  <td className="whitespace-nowrap px-2 py-2 text-slate-800">{fmtScore(stock.score_total ?? stock.score)}</td>
+                  <td className="whitespace-nowrap px-2 py-2 text-slate-800">
                     {stock.radar_tag || stock.tag || '待補'}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5">
+                  <td className="whitespace-nowrap px-2 py-2">
                     <RestrictionBadge text={stock.trade_warning} />
                   </td>
                 </tr>
@@ -328,7 +333,7 @@ function ScanStatusPanel({
           ) : null}
         </div>
 
-        <div className="w-full max-w-xs rounded-lg bg-slate-50 p-3 ring-1 ring-slate-100">
+        <div className="w-full max-w-sm rounded-lg bg-slate-50 p-3 ring-1 ring-slate-100">
           <div className="text-[11px] text-slate-500">狀態更新時間</div>
           <div className="mt-1 text-sm font-semibold text-slate-900">
             {formatTaipeiTime(status.last_updated)}
@@ -364,10 +369,10 @@ export default async function HomePage() {
   const showRanking = Boolean(data) && stage !== 'empty'
 
   return (
-    <main className="mx-auto max-w-7xl space-y-4 px-4 py-4">
-      <section className="rounded-[24px] bg-slate-900 px-5 py-5 text-white shadow-sm md:px-6 md:py-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+    <main className="mx-auto max-w-7xl space-y-3 px-3 py-3">
+      <section className="rounded-3xl bg-slate-900 px-4 py-4 text-white shadow-sm md:px-5 md:py-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
             <div className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-slate-200 ring-1 ring-white/15">
               TW Smart Money Radar
             </div>
@@ -379,7 +384,7 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <div className="rounded-xl bg-white/10 p-3 ring-1 ring-white/10">
+          <div className="w-full max-w-[220px] rounded-xl bg-white/10 p-3 ring-1 ring-white/10">
             <div className="text-[11px] text-slate-300">更新時間</div>
             <div className="mt-1 text-base font-semibold text-white">
               {formatTaipeiTime(headerUpdatedAt)}
@@ -425,29 +430,61 @@ export default async function HomePage() {
 
       {showRanking ? (
         <>
-          <section className="grid gap-2 md:grid-cols-2 xl:grid-cols-6">
-            <SummaryCard title="掃描市場檔數" value={data?.summary?.market_scanned ?? 0} hint="成功抓到可用資料檔數" />
-            <SummaryCard title="入選標的" value={data?.summary?.selected ?? 0} hint="通過模型篩選後的總檔數" />
-            <SummaryCard title="剛啟動總數" value={data?.summary?.starting_count ?? 0} hint="包含爆量突破與收籌墊高" />
-            <SummaryCard title="爆量突破" value={data?.summary?.starting_breakout_count ?? 0} hint="剛啟動子類型之一" />
-            <SummaryCard title="收籌墊高" value={data?.summary?.starting_accum_count ?? 0} hint="剛啟動子類型之一" />
-            <SummaryCard title="可能第二波" value={data?.summary?.second_wave_count ?? 0} hint="整理後再攻候選" />
+          <section className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">
+            <SummaryCard
+              title="掃描市場檔數"
+              value={data?.summary?.market_scanned ?? 0}
+              hint="成功抓到可用資料檔數"
+            />
+            <SummaryCard
+              title="入選標的"
+              value={data?.summary?.selected ?? 0}
+              hint="通過模型篩選後的總檔數"
+            />
+            <SummaryCard
+              title="剛啟動總數"
+              value={data?.summary?.starting_count ?? 0}
+              hint="包含爆量突破與收籌墊高"
+            />
+            <SummaryCard
+              title="爆量突破"
+              value={data?.summary?.starting_breakout_count ?? 0}
+              hint="剛啟動子類型之一"
+            />
+            <SummaryCard
+              title="收籌墊高"
+              value={data?.summary?.starting_accum_count ?? 0}
+              hint="剛啟動子類型之一"
+            />
+            <SummaryCard
+              title="可能第二波"
+              value={data?.summary?.second_wave_count ?? 0}
+              hint="整理後再攻候選"
+            />
           </section>
 
           <section className="grid gap-2 md:grid-cols-2">
-            <SummaryCard title="強者恆強" value={data?.summary?.strong_trend_count ?? 0} hint="主升段延續、強勢續強" />
-            <SummaryCard title="過熱風險" value={data?.summary?.overheated_count ?? 0} hint="量比與 RSI 偏高的高熱股票" />
+            <SummaryCard
+              title="強者恆強"
+              value={data?.summary?.strong_trend_count ?? 0}
+              hint="主升段延續、強勢續強"
+            />
+            <SummaryCard
+              title="過熱風險"
+              value={data?.summary?.overheated_count ?? 0}
+              hint="量比與 RSI 偏高的高熱股票"
+            />
           </section>
 
           <section className="grid gap-3 xl:grid-cols-2">
             <StockSection
               title="剛啟動｜收籌墊高"
-              subtitle="偏慢慢墊高、量能溫和轉強，適合抓主力收籌後再發動。"
+              subtitle="偏慢慢墊高、量能溫和轉強。"
               rows={startingAccum}
             />
             <StockSection
               title="可能第二波"
-              subtitle="偏整理後再攻，重點看強勢整理後的再次轉強。"
+              subtitle="偏整理後再攻，重點看強勢整理後的再轉強。"
               rows={secondWave}
             />
           </section>
@@ -455,13 +492,15 @@ export default async function HomePage() {
           <section className="grid gap-3 xl:grid-cols-2">
             <StockSection
               title="強者恆強"
-              subtitle="偏主升段延續，適合觀察高位整理後續創高型股票。"
+              subtitle="偏主升段延續，高位整理後續創高。"
               rows={strongTrend}
+              compact
             />
             <StockSection
               title="剛啟動｜爆量突破"
-              subtitle="偏剛轉強、帶量突破平台，適合抓早期啟動股。"
+              subtitle="偏剛轉強、帶量突破平台。"
               rows={startingBreakout}
+              compact
             />
           </section>
         </>
