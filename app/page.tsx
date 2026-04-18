@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { ScanButton } from '@/components/scan-button'
 
@@ -5,6 +7,7 @@ type StockRow = {
   stock_id: string
   name?: string | null
   theme?: string | null
+  group?: string | null
   close?: number | null
   turnover_100m?: number | null
   score_total?: number | null
@@ -24,7 +27,7 @@ type LatestScanResponse = {
     starting_accum?: StockRow[]
     second_wave?: StockRow[]
     strong_trend?: StockRow[]
-    watchlist?: StockRow[]
+    all_selected?: StockRow[]
     summary?: {
       market_scanned?: number | null
       selected?: number | null
@@ -69,7 +72,6 @@ async function fetchBackendJson<T>(path: string): Promise<T | null> {
       cache: 'no-store',
       next: { revalidate: 0 },
     })
-
     if (!res.ok) return null
     return (await res.json()) as T
   } catch {
@@ -94,7 +96,6 @@ function fmtScore(value?: number | null) {
 
 function formatTaipeiTime(value?: string | null) {
   if (!value) return '待補'
-
   try {
     return new Intl.DateTimeFormat('zh-TW', {
       timeZone: 'Asia/Taipei',
@@ -140,10 +141,10 @@ function SummaryCard({
   hint: string
 }) {
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
-      <div className="text-xs text-slate-500">{title}</div>
-      <div className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{value}</div>
-      <div className="mt-1 text-xs leading-5 text-slate-600">{hint}</div>
+    <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-100">
+      <div className="text-[11px] text-slate-500">{title}</div>
+      <div className="mt-1 text-xl font-bold tracking-tight text-slate-900">{value}</div>
+      <div className="mt-1 text-[11px] leading-4 text-slate-600">{hint}</div>
     </div>
   )
 }
@@ -151,7 +152,7 @@ function SummaryCard({
 function RestrictionBadge({ text }: { text?: string | null }) {
   if (!text) return null
   return (
-    <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">
+    <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
       {text}
     </span>
   )
@@ -167,32 +168,32 @@ function StockSection({
   rows: StockRow[]
 }) {
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
-      <div className="mb-3">
-        <h2 className="text-lg font-bold text-slate-900">{title}</h2>
-        <p className="mt-1 text-xs leading-5 text-slate-500">{subtitle}</p>
+    <section className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-100">
+      <div className="mb-2">
+        <h2 className="text-base font-bold text-slate-900">{title}</h2>
+        <p className="mt-1 text-[11px] leading-4 text-slate-500">{subtitle}</p>
       </div>
 
       {rows.length ? (
-        <div className="overflow-x-auto rounded-xl ring-1 ring-slate-100">
-          <table className="min-w-full text-sm">
+        <div className="overflow-x-auto rounded-lg ring-1 ring-slate-100">
+          <table className="min-w-full text-xs">
             <thead className="bg-slate-50">
               <tr>
-                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">股號</th>
-                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">名稱</th>
-                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">主題</th>
-                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">現價</th>
-                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">成交值</th>
-                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">分數</th>
-                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">標籤</th>
-                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-slate-700">交易限制</th>
+                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">股號</th>
+                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">名稱</th>
+                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">主題</th>
+                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">現價</th>
+                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">成交值</th>
+                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">分數</th>
+                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">標籤</th>
+                <th className="whitespace-nowrap px-2 py-1.5 text-left font-semibold text-slate-700">交易限制</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((stock) => (
                 <tr key={stock.stock_id} className="border-t border-slate-100">
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-800">{stock.stock_id}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-900">
+                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-800">{stock.stock_id}</td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-900">
                     <Link
                       href={`/stocks/${stock.stock_id}`}
                       className="font-medium underline-offset-4 hover:underline"
@@ -200,14 +201,18 @@ function StockSection({
                       {stock.name || stock.stock_id}
                     </Link>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-800">{stock.theme || '其他'}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-800">{fmtPrice(stock.close)}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-800">{fmtTurnover(stock.turnover_100m)}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-800">{fmtScore(stock.score_total ?? stock.score)}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-800">
+                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-800">
+                    {stock.theme || stock.group || '其他'}
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-800">{fmtPrice(stock.close)}</td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-800">{fmtTurnover(stock.turnover_100m)}</td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-800">
+                    {fmtScore(stock.score_total ?? stock.score)}
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-800">
                     {stock.radar_tag || stock.tag || '待補'}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2">
+                  <td className="whitespace-nowrap px-2 py-1.5">
                     <RestrictionBadge text={stock.trade_warning} />
                   </td>
                 </tr>
@@ -216,7 +221,7 @@ function StockSection({
           </table>
         </div>
       ) : (
-        <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500">
+        <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-xs text-slate-500">
           目前沒有資料
         </div>
       )}
@@ -233,9 +238,9 @@ function ScanStatusPanel({
 }) {
   if (!status) {
     return (
-      <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
-        <div className="text-lg font-bold text-slate-900">尚未取得掃描狀態</div>
-        <p className="mt-2 text-sm text-slate-600">請確認後端 API 與環境變數是否正常。</p>
+      <section className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-100">
+        <div className="text-base font-bold text-slate-900">尚未取得掃描狀態</div>
+        <p className="mt-1 text-xs text-slate-600">請確認後端 API 與環境變數是否正常。</p>
       </section>
     )
   }
@@ -303,35 +308,35 @@ function ScanStatusPanel({
   }
 
   return (
-    <section className={`rounded-2xl p-4 shadow-sm ring-1 ${tone.card}`}>
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <section className={`rounded-xl p-3 shadow-sm ring-1 ${tone.card}`}>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <div className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${tone.badge}`}>
+          <div className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${tone.badge}`}>
             {stageLabel}
           </div>
-          <h2 className={`mt-2 text-xl font-bold ${tone.title}`}>{title}</h2>
-          <p className={`mt-2 text-sm ${tone.text}`}>{description}</p>
+          <h2 className={`mt-2 text-lg font-bold ${tone.title}`}>{title}</h2>
+          <p className={`mt-1 text-xs ${tone.text}`}>{description}</p>
 
-          <div className={`mt-3 text-sm ${tone.text}`}>
+          <div className={`mt-2 text-xs ${tone.text}`}>
             進度：{processed} / {total}　成功：{success}　失敗：{failed}　略過：{skipped}
           </div>
 
           {stage === 'empty' && lastSuccessfulUpdatedAt ? (
-            <div className="mt-2 text-xs text-slate-500">
+            <div className="mt-1 text-[11px] text-slate-500">
               最近一次有結果的榜單時間：{formatTaipeiTime(lastSuccessfulUpdatedAt)}
             </div>
           ) : null}
         </div>
 
-        <div className="w-full max-w-sm rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
-          <div className="text-xs text-slate-500">狀態更新時間</div>
-          <div className="mt-1 text-base font-semibold text-slate-900">
+        <div className="w-full max-w-xs rounded-lg bg-slate-50 p-3 ring-1 ring-slate-100">
+          <div className="text-[11px] text-slate-500">狀態更新時間</div>
+          <div className="mt-1 text-sm font-semibold text-slate-900">
             {formatTaipeiTime(status.last_updated)}
           </div>
         </div>
       </div>
 
-      <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100">
         <div
           className={`h-full rounded-full transition-all ${tone.bar}`}
           style={{ width: `${percent}%` }}
@@ -359,43 +364,43 @@ export default async function HomePage() {
   const showRanking = Boolean(data) && stage !== 'empty'
 
   return (
-    <main className="mx-auto max-w-7xl space-y-5 px-4 py-5">
-      <section className="rounded-[28px] bg-slate-900 px-6 py-6 text-white shadow-sm md:px-8 md:py-7">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+    <main className="mx-auto max-w-7xl space-y-4 px-4 py-4">
+      <section className="rounded-[24px] bg-slate-900 px-5 py-5 text-white shadow-sm md:px-6 md:py-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-white/15">
+            <div className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-slate-200 ring-1 ring-white/15">
               TW Smart Money Radar
             </div>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">
+            <h1 className="mt-3 text-2xl font-bold tracking-tight md:text-3xl">
               台股主力掃描首頁
             </h1>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
+            <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-300 md:text-sm">
               已排除 ETF 與金融股。首頁上方可直接搜尋任意股票，榜單中若有禁現沖、先買現沖、處置或注意股，會醒目標示。
             </p>
           </div>
 
-          <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
-            <div className="text-xs text-slate-300">更新時間</div>
-            <div className="mt-2 text-lg font-semibold text-white">
+          <div className="rounded-xl bg-white/10 p-3 ring-1 ring-white/10">
+            <div className="text-[11px] text-slate-300">更新時間</div>
+            <div className="mt-1 text-base font-semibold text-white">
               {formatTaipeiTime(headerUpdatedAt)}
             </div>
-            <div className="mt-1 text-xs text-slate-300">
+            <div className="mt-1 text-[11px] text-slate-300">
               平日台灣時間 17:00 自動掃描
             </div>
           </div>
         </div>
 
-        <div className="mt-5 flex flex-col gap-3 md:flex-row">
-          <form action="/stocks" className="flex w-full gap-3">
+        <div className="mt-4 flex flex-col gap-2 md:flex-row">
+          <form action="/stocks" className="flex w-full gap-2">
             <input
               type="text"
               name="q"
               placeholder="搜尋股號、股名、題材，例如：1303 / 南亞 / PCB"
-              className="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white/30"
+              className="w-full rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white/30"
             />
             <button
               type="submit"
-              className="rounded-2xl bg-white px-5 py-3 text-sm font-medium text-slate-900 transition hover:bg-slate-100"
+              className="rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-slate-900 transition hover:bg-slate-100"
             >
               搜尋
             </button>
@@ -406,10 +411,10 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-3">
+        <div className="mt-2 flex flex-wrap gap-2">
           <Link
             href="/stocks"
-            className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/15 transition hover:bg-white/15"
+            className="rounded-xl bg-white/10 px-3 py-2 text-xs font-medium text-white ring-1 ring-white/15 transition hover:bg-white/15"
           >
             進入股票清單
           </Link>
@@ -420,53 +425,21 @@ export default async function HomePage() {
 
       {showRanking ? (
         <>
-          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-            <SummaryCard
-              title="掃描市場檔數"
-              value={data?.summary?.market_scanned ?? 0}
-              hint="成功抓到可用資料檔數"
-            />
-            <SummaryCard
-              title="入選標的"
-              value={data?.summary?.selected ?? 0}
-              hint="通過模型篩選後的總檔數"
-            />
-            <SummaryCard
-              title="剛啟動總數"
-              value={data?.summary?.starting_count ?? 0}
-              hint="包含爆量突破與收籌墊高"
-            />
-            <SummaryCard
-              title="爆量突破"
-              value={data?.summary?.starting_breakout_count ?? 0}
-              hint="剛啟動子類型之一"
-            />
-            <SummaryCard
-              title="收籌墊高"
-              value={data?.summary?.starting_accum_count ?? 0}
-              hint="剛啟動子類型之一"
-            />
-            <SummaryCard
-              title="可能第二波"
-              value={data?.summary?.second_wave_count ?? 0}
-              hint="整理後再攻候選"
-            />
+          <section className="grid gap-2 md:grid-cols-2 xl:grid-cols-6">
+            <SummaryCard title="掃描市場檔數" value={data?.summary?.market_scanned ?? 0} hint="成功抓到可用資料檔數" />
+            <SummaryCard title="入選標的" value={data?.summary?.selected ?? 0} hint="通過模型篩選後的總檔數" />
+            <SummaryCard title="剛啟動總數" value={data?.summary?.starting_count ?? 0} hint="包含爆量突破與收籌墊高" />
+            <SummaryCard title="爆量突破" value={data?.summary?.starting_breakout_count ?? 0} hint="剛啟動子類型之一" />
+            <SummaryCard title="收籌墊高" value={data?.summary?.starting_accum_count ?? 0} hint="剛啟動子類型之一" />
+            <SummaryCard title="可能第二波" value={data?.summary?.second_wave_count ?? 0} hint="整理後再攻候選" />
           </section>
 
-          <section className="grid gap-3 md:grid-cols-2">
-            <SummaryCard
-              title="強者恆強"
-              value={data?.summary?.strong_trend_count ?? 0}
-              hint="主升段延續、強勢續強"
-            />
-            <SummaryCard
-              title="過熱風險"
-              value={data?.summary?.overheated_count ?? 0}
-              hint="量比與 RSI 偏高的高熱股票"
-            />
+          <section className="grid gap-2 md:grid-cols-2">
+            <SummaryCard title="強者恆強" value={data?.summary?.strong_trend_count ?? 0} hint="主升段延續、強勢續強" />
+            <SummaryCard title="過熱風險" value={data?.summary?.overheated_count ?? 0} hint="量比與 RSI 偏高的高熱股票" />
           </section>
 
-          <section className="grid gap-4 xl:grid-cols-2">
+          <section className="grid gap-3 xl:grid-cols-2">
             <StockSection
               title="剛啟動｜收籌墊高"
               subtitle="偏慢慢墊高、量能溫和轉強，適合抓主力收籌後再發動。"
@@ -479,7 +452,7 @@ export default async function HomePage() {
             />
           </section>
 
-          <section className="grid gap-4 xl:grid-cols-2">
+          <section className="grid gap-3 xl:grid-cols-2">
             <StockSection
               title="強者恆強"
               subtitle="偏主升段延續，適合觀察高位整理後續創高型股票。"
@@ -493,16 +466,16 @@ export default async function HomePage() {
           </section>
         </>
       ) : stage === 'empty' ? (
-        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
-          <div className="text-lg font-bold text-slate-900">今天沒有新榜單</div>
-          <p className="mt-2 text-sm text-slate-600">
+        <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+          <div className="text-base font-bold text-slate-900">今天沒有新榜單</div>
+          <p className="mt-1 text-xs text-slate-600">
             這代表本次掃描有正常跑完，但沒有股票通過第一層快篩，所以不顯示舊榜單來避免誤判。
           </p>
         </section>
       ) : (
-        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
-          <div className="text-lg font-bold text-slate-900">目前還沒有掃描結果</div>
-          <p className="mt-2 text-sm text-slate-600">請先等排程掃描完成，或按右上方的立即掃描手動執行。</p>
+        <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+          <div className="text-base font-bold text-slate-900">目前還沒有掃描結果</div>
+          <p className="mt-1 text-xs text-slate-600">請先等排程掃描完成，或按右上方的立即掃描手動執行。</p>
         </section>
       )}
     </main>
