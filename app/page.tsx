@@ -10,6 +10,8 @@ type StockRow = {
   score_total?: number | null
   score?: number | null
   radar_tag?: string | null
+  radar_tag_main?: string | null
+  radar_tag_sub?: string | null
   tag?: string | null
   trade_warning?: string | null
 }
@@ -18,13 +20,20 @@ type LatestScanResponse = {
   updated_at?: string | null
   data?: {
     starting?: StockRow[]
+    starting_breakout?: StockRow[]
+    starting_accum?: StockRow[]
     second_wave?: StockRow[]
+    strong_trend?: StockRow[]
     watchlist?: StockRow[]
     summary?: {
       market_scanned?: number | null
       selected?: number | null
       starting_count?: number | null
+      starting_breakout_count?: number | null
+      starting_accum_count?: number | null
       second_wave_count?: number | null
+      strong_trend_count?: number | null
+      overheated_count?: number | null
     }
   }
 }
@@ -102,6 +111,26 @@ function formatTaipeiTime(value?: string | null) {
   } catch {
     return value
   }
+}
+
+function getStageLabel(stage?: string | null) {
+  const map: Record<string, string> = {
+    idle: '待機',
+    prepare: '準備中',
+    fetch: '抓資料',
+    filter: '快篩中',
+    merge: '合併資料',
+    score: '計算分數',
+    payload: '建立結果',
+    save: '儲存中',
+    done: '完成',
+    completed: '已完成',
+    empty: '無結果',
+    error: '錯誤',
+  }
+
+  if (!stage) return '待機'
+  return map[stage] || stage
 }
 
 function SummaryCard({
@@ -219,6 +248,7 @@ function ScanStatusPanel({
   }
 
   const stage = status.stage || 'idle'
+  const stageLabel = getStageLabel(stage)
   const percent = Math.max(0, Math.min(100, Number(status.percent ?? 0)))
   const processed = Number(status.processed ?? 0)
   const total = Number(status.total ?? 0)
@@ -236,7 +266,10 @@ function ScanStatusPanel({
     badge: 'bg-slate-100 text-slate-700',
   }
 
-  if (status.scan_running || stage === 'prepare' || stage === 'running') {
+  if (
+    status.scan_running ||
+    ['prepare', 'fetch', 'filter', 'merge', 'score', 'payload', 'save'].includes(stage)
+  ) {
     title = '掃描進行中'
     tone = {
       card: 'bg-white ring-blue-100',
@@ -245,7 +278,7 @@ function ScanStatusPanel({
       bar: 'bg-blue-500',
       badge: 'bg-blue-100 text-blue-700',
     }
-  } else if (stage === 'completed') {
+  } else if (stage === 'completed' || stage === 'done') {
     title = '掃描完成'
     tone = {
       card: 'bg-white ring-emerald-100',
@@ -281,7 +314,7 @@ function ScanStatusPanel({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${tone.badge}`}>
-            {stage}
+            {stageLabel}
           </div>
           <h2 className={`mt-3 text-2xl font-bold ${tone.title}`}>{title}</h2>
           <p className={`mt-2 ${tone.text}`}>{description}</p>
@@ -324,8 +357,10 @@ export default async function HomePage() {
   const data = raw?.data
   const stage = status?.stage || 'idle'
 
-  const starting = data?.starting?.slice(0, 10) ?? []
+  const startingBreakout = data?.starting_breakout?.slice(0, 10) ?? []
+  const startingAccum = data?.starting_accum?.slice(0, 10) ?? []
   const secondWave = data?.second_wave?.slice(0, 10) ?? []
+  const strongTrend = data?.strong_trend?.slice(0, 10) ?? []
   const watchlist = data?.watchlist?.slice(0, 10) ?? []
 
   const headerUpdatedAt = status?.last_updated || raw?.updated_at || null
@@ -393,21 +428,31 @@ export default async function HomePage() {
 
       {showRanking ? (
         <>
-          <section className="grid gap-4 md:grid-cols-4">
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
             <SummaryCard
               title="掃描市場檔數"
               value={data?.summary?.market_scanned ?? 0}
-              hint="原始全市場掃描檔數"
+              hint="成功抓到可用資料檔數"
             />
             <SummaryCard
               title="入選標的"
               value={data?.summary?.selected ?? 0}
-              hint="排除 ETF / 金融後通過模型篩選"
+              hint="通過模型篩選後的總檔數"
             />
             <SummaryCard
-              title="剛啟動"
+              title="剛啟動總數"
               value={data?.summary?.starting_count ?? 0}
-              hint="偏第一波初動候選"
+              hint="包含爆量突破與收籌墊高"
+            />
+            <SummaryCard
+              title="爆量突破"
+              value={data?.summary?.starting_breakout_count ?? 0}
+              hint="剛啟動子類型之一"
+            />
+            <SummaryCard
+              title="收籌墊高"
+              value={data?.summary?.starting_accum_count ?? 0}
+              hint="剛啟動子類型之一"
             />
             <SummaryCard
               title="可能第二波"
@@ -416,16 +461,42 @@ export default async function HomePage() {
             />
           </section>
 
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
+            <SummaryCard
+              title="強者恆強"
+              value={data?.summary?.strong_trend_count ?? 0}
+              hint="主升段延續、強勢續強"
+            />
+            <SummaryCard
+              title="過熱風險"
+              value={data?.summary?.overheated_count ?? 0}
+              hint="量比與 RSI 偏高的高熱股票"
+            />
+          </section>
+
           <section className="grid gap-6 xl:grid-cols-2">
             <StockSection
-              title="剛啟動"
-              subtitle="偏第一波初動，重點看平台突破、量能與均線翻揚。"
-              rows={starting}
+              title="剛啟動｜爆量突破"
+              subtitle="偏剛轉強、帶量突破平台，適合抓早期啟動股。"
+              rows={startingBreakout}
             />
             <StockSection
+              title="剛啟動｜收籌墊高"
+              subtitle="偏慢慢墊高、量能溫和轉強，適合抓主力收籌後再發動。"
+              rows={startingAccum}
+            />
+          </section>
+
+          <section className="grid gap-6 xl:grid-cols-2">
+            <StockSection
               title="可能第二波"
-              subtitle="偏整理後再攻，重點看第一波後的整理與再轉強。"
+              subtitle="偏整理後再攻，重點看強勢整理後的再次轉強。"
               rows={secondWave}
+            />
+            <StockSection
+              title="強者恆強"
+              subtitle="偏主升段延續，適合觀察高位整理後續創高型股票。"
+              rows={strongTrend}
             />
           </section>
 
