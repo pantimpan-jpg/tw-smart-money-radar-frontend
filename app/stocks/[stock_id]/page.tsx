@@ -16,6 +16,22 @@ import {
   type StockDetailResponse,
 } from '@/lib/api'
 
+type PriceHistoryPoint = {
+  date: string
+  close?: number | null
+}
+
+type CompanyProfile = {
+  stock_id?: string
+  industry?: string | null
+  theme?: string | null
+  industry_role?: string | null
+  one_liner?: string | null
+  positioning?: string | null
+  core_tech?: string[]
+  main_applications?: string[]
+}
+
 function fmtNumber(value?: number | null, digits = 2) {
   if (value === null || value === undefined || Number.isNaN(value)) return '待補'
   return Number(value).toFixed(digits)
@@ -62,6 +78,11 @@ function fmtYiWithUnit(value?: number | null, digits = 1) {
   const yi = toYi(value)
   if (yi === null) return '待補'
   return `${yi.toFixed(digits)} 億`
+}
+
+function joinList(items?: string[] | null) {
+  if (!items || !items.length) return '待補'
+  return items.filter(Boolean).join('、')
 }
 
 function StatCard({
@@ -124,6 +145,148 @@ function SectionSkeleton({ title }: { title: string }) {
         <div className="h-64 animate-pulse rounded-2xl bg-slate-100" />
       </div>
     </section>
+  )
+}
+
+function HeroBadge({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm text-slate-100">
+      {children}
+    </span>
+  )
+}
+
+function HeroInfoCard({
+  title,
+  main,
+  sub,
+  chips,
+}: {
+  title: string
+  main: string
+  sub?: string
+  chips?: string[]
+}) {
+  return (
+    <div className="rounded-3xl bg-white/10 p-4 ring-1 ring-white/10">
+      <div className="text-sm text-slate-300">{title}</div>
+      <div className="mt-2 text-xl font-bold text-white">{main}</div>
+      {sub ? <div className="mt-2 text-sm leading-6 text-slate-300">{sub}</div> : null}
+      {chips && chips.length ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {chips.map((chip) => (
+            <span
+              key={chip}
+              className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-slate-100"
+            >
+              {chip}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function HeroPriceChart({ data }: { data: PriceHistoryPoint[] }) {
+  const valid = data.filter((item) => item.close !== null && item.close !== undefined && !Number.isNaN(item.close))
+  if (!valid.length) {
+    return (
+      <div className="rounded-3xl bg-white/10 p-5 ring-1 ring-white/10">
+        <div className="text-sm text-slate-300">180 天走勢圖</div>
+        <div className="mt-4 flex h-[320px] items-center justify-center rounded-2xl bg-slate-950/30 text-sm text-slate-400">
+          目前沒有走勢資料
+        </div>
+      </div>
+    )
+  }
+
+  const values = valid.map((item) => Number(item.close))
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const first = Number(valid[0].close)
+  const last = Number(valid[valid.length - 1].close)
+  const range = max - min || 1
+  const changePct = first !== 0 ? ((last - first) / first) * 100 : 0
+
+  const points = valid.map((item, idx) => {
+    const x = (idx / Math.max(valid.length - 1, 1)) * 100
+    const y = 88 - ((Number(item.close) - min) / range) * 76
+    return {
+      x,
+      y,
+      date: item.date,
+      close: Number(item.close),
+    }
+  })
+
+  const polyline = points.map((point) => `${point.x},${point.y}`).join(' ')
+  const midIndex = Math.floor(points.length / 2)
+  const labelPoints = [points[0], points[midIndex], points[points.length - 1]]
+
+  return (
+    <div className="rounded-3xl bg-white/10 p-5 ring-1 ring-white/10">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-sm text-slate-300">180 天走勢圖</div>
+          <div className="mt-1 text-2xl font-bold text-white">{fmtNumber(last, 2)}</div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 text-right text-xs text-slate-300">
+          <div>
+            <div>區間低</div>
+            <div className="mt-1 text-sm font-semibold text-white">{fmtNumber(min, 2)}</div>
+          </div>
+          <div>
+            <div>區間高</div>
+            <div className="mt-1 text-sm font-semibold text-white">{fmtNumber(max, 2)}</div>
+          </div>
+          <div>
+            <div>區間漲跌</div>
+            <div className="mt-1 text-sm font-semibold text-white">{fmtPercent(changePct, 2)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-2xl bg-slate-950/30 p-4">
+        <svg viewBox="0 0 100 100" className="h-[320px] w-full overflow-visible">
+          <line x1="0" y1="12" x2="100" y2="12" stroke="rgba(255,255,255,0.08)" strokeWidth="0.4" />
+          <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(255,255,255,0.08)" strokeWidth="0.4" />
+          <line x1="0" y1="88" x2="100" y2="88" stroke="rgba(255,255,255,0.08)" strokeWidth="0.4" />
+
+          <polyline
+            fill="none"
+            stroke="#60a5fa"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            points={polyline}
+          />
+
+          {points.length ? (
+            <circle
+              cx={points[points.length - 1].x}
+              cy={points[points.length - 1].y}
+              r="2.2"
+              fill="#ffffff"
+            />
+          ) : null}
+
+          {labelPoints.map((point) => (
+            <text
+              key={`${point.date}-${point.x}`}
+              x={point.x}
+              y="98"
+              textAnchor="middle"
+              fontSize="3.3"
+              fill="rgba(255,255,255,0.72)"
+            >
+              {point.date.slice(5)}
+            </text>
+          ))}
+        </svg>
+      </div>
+    </div>
   )
 }
 
@@ -332,6 +495,16 @@ export default function StockDetailPage() {
   const meta = detail?.meta
   const overview = detail?.overview
 
+  const companyProfile = useMemo(() => {
+    return (((detail as any)?.company_profile ?? null) as CompanyProfile | null)
+  }, [detail])
+
+  const priceHistory180 = useMemo(() => {
+    const raw = (detail as any)?.price_history_180
+    if (!Array.isArray(raw)) return []
+    return raw as PriceHistoryPoint[]
+  }, [detail])
+
   const revenueChartData = useMemo(
     () => buildRevenueChartData(detail?.revenues ?? []),
     [detail]
@@ -344,30 +517,76 @@ export default function StockDetailPage() {
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
       <section className="rounded-[28px] bg-slate-900 px-6 py-7 text-white shadow-sm md:px-8 md:py-8">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-              {stockId} {stockName}
-            </h1>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-              {loading
-                ? '頁面已先載入，個股資料正在背景讀取中。'
-                : `搜尋股票與榜單股票共用同一頁面。${meta?.in_selected ? '這檔有進今日榜單。' : '這檔未進今日榜單，但資料仍完整顯示。'}`}
-            </p>
+        <div className="grid gap-6 xl:grid-cols-[1.1fr,1.45fr,0.85fr] xl:items-stretch">
+          <div className="flex flex-col justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+                {stockId} {stockName}
+              </h1>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <HeroBadge>{companyProfile?.industry || overview?.industry || '待補產業'}</HeroBadge>
+                <HeroBadge>{companyProfile?.theme || overview?.theme || '其他主題'}</HeroBadge>
+                <HeroBadge>{meta?.label || '待補'}</HeroBadge>
+              </div>
+
+              <div className="mt-5 space-y-2">
+                <div className="text-lg font-semibold text-white">
+                  {companyProfile?.one_liner || '待補'}
+                </div>
+                <div className="text-sm leading-6 text-slate-300">
+                  公司定位：{companyProfile?.industry_role || companyProfile?.positioning || '待補'}
+                </div>
+                <div className="text-sm leading-6 text-slate-300">
+                  {loading
+                    ? '頁面已先載入，個股資料正在背景讀取中。'
+                    : `搜尋股票與榜單股票共用同一頁面。${meta?.in_selected ? '這檔有進今日榜單。' : '這檔未進今日榜單，但資料仍完整顯示。'}`}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                href="/"
+                className="rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-900"
+              >
+                返回首頁
+              </Link>
+              <Link
+                href="/stocks"
+                className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/15"
+              >
+                搜尋股票
+              </Link>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={refreshing || loading}
+                className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {refreshing ? '重新整理中…' : '重新整理資料'}
+              </button>
+            </div>
           </div>
 
-          <div className="rounded-3xl bg-white/10 p-4 ring-1 ring-white/10">
-            <div className="text-sm text-slate-300">資料狀態</div>
-            <div className="mt-2 text-lg font-semibold text-white">
-              {loading ? '讀取中' : meta?.label || '待補'}
-            </div>
-            <div className="mt-1 text-sm text-slate-300">
-              {loading
-                ? '先顯示頁面，再背景抓資料。'
-                : meta?.in_selected
-                  ? '有模型標籤與分數。'
-                  : '沒有模型分數，但個股資料照常顯示。'}
-            </div>
+          <HeroPriceChart data={priceHistory180} />
+
+          <div className="grid gap-4">
+            <HeroInfoCard
+              title="公司定位"
+              main={companyProfile?.industry_role || '待補'}
+              sub={companyProfile?.positioning || companyProfile?.one_liner || '待補'}
+              chips={[
+                companyProfile?.industry || overview?.industry || '待補',
+                companyProfile?.theme || overview?.theme || '其他',
+              ]}
+            />
+
+            <HeroInfoCard
+              title="核心技術 / 主要應用"
+              main={joinList(companyProfile?.core_tech)}
+              sub={`主要應用：${joinList(companyProfile?.main_applications)}`}
+            />
           </div>
         </div>
 
@@ -376,29 +595,6 @@ export default function StockDetailPage() {
             交易限制提醒：{tradeWarning}
           </div>
         ) : null}
-
-        <div className="mt-5 flex flex-wrap gap-3">
-          <Link
-            href="/"
-            className="rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-900"
-          >
-            返回首頁
-          </Link>
-          <Link
-            href="/stocks"
-            className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/15"
-          >
-            搜尋股票
-          </Link>
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={refreshing || loading}
-            className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/15 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {refreshing ? '重新整理中…' : '重新整理資料'}
-          </button>
-        </div>
       </section>
 
       {loadFailed && !loading ? (
@@ -570,6 +766,10 @@ export default function StockDetailPage() {
                 rows={[
                   ['產業', overview?.industry || '待補'],
                   ['主題', overview?.theme || '其他'],
+                  ['一句話定位', companyProfile?.one_liner || '待補'],
+                  ['公司定位', companyProfile?.industry_role || companyProfile?.positioning || '待補'],
+                  ['核心技術', joinList(companyProfile?.core_tech)],
+                  ['主要應用', joinList(companyProfile?.main_applications)],
                   ['今日榜單狀態', meta?.label || '待補'],
                   ['技術標籤', meta?.in_selected ? (overview?.technical_tag || '待補') : '未進榜不顯示'],
                   ['雷達標籤', meta?.in_selected ? (overview?.radar_tag || '待補') : '未進榜不顯示'],
