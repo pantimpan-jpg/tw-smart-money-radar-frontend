@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Link from 'next/link'
 
 export type StockRow = {
   stock_id: string
@@ -78,22 +79,46 @@ export function StockTable({
             <tbody>
               {visibleRows.map((row, idx) => {
                 const key = `${row.stock_id}-${idx}`
+                const href = `/stocks/${row.stock_id}`
+
                 return (
                   <tr key={key} className="border-t border-slate-100 hover:bg-slate-50">
-                    <td className="px-3 py-3 font-medium text-slate-900">{row.stock_id || '-'}</td>
-                    <td className="px-3 py-3 text-slate-800">{row.name || '-'}</td>
+                    <td className="px-3 py-3 font-medium text-slate-900">
+                      <Link
+                        href={href}
+                        className="rounded underline-offset-4 hover:text-blue-600 hover:underline"
+                      >
+                        {row.stock_id || '-'}
+                      </Link>
+                    </td>
+
+                    <td className="px-3 py-3 text-slate-800">
+                      <Link
+                        href={href}
+                        className="rounded underline-offset-4 hover:text-blue-600 hover:underline"
+                      >
+                        {row.name || '-'}
+                      </Link>
+                    </td>
+
                     <td className="px-3 py-3 text-slate-600">{row.theme || row.group || '-'}</td>
+
                     <td className="px-3 py-3 text-right text-slate-800">{fmt(row.close)}</td>
+
                     <td className="px-3 py-3 text-right text-slate-800">
                       {fmt(row.turnover_100m)}
                     </td>
+
                     <td className="px-3 py-3 text-right text-slate-800">
                       {fmt(row.volume_ratio)}
                     </td>
+
                     <td className="px-3 py-3 text-right font-semibold text-slate-900">
                       {fmt(row.score ?? row.score_total, 1)}
                     </td>
+
                     <td className="px-3 py-3 text-slate-700">{row.tag || row.radar_tag || '-'}</td>
+
                     <td className="px-3 py-3 text-slate-600">{row.reason_text || '-'}</td>
                   </tr>
                 )
